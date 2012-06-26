@@ -1,5 +1,6 @@
-#define _CRT_SECURE_NO_WARNINGS
 #include "SearchContext.h"
+
+#define POKES_PER_SECOND (2)
 
 // ------------------------------------------------------------------------------------------------
 
@@ -29,16 +30,21 @@ SearchEntry::~SearchEntry()
 SearchContext::SearchContext(HWND window)
 : thread_(INVALID_HANDLE_VALUE)
 , stop_(0)
+, searchID_(0)
 , offset_(0)
 , window_(window)
 {
     mutex_ = CreateMutex(NULL, FALSE, NULL);
+    config_.load();
+    lastPoke_ = GetTickCount();
 }
 
 SearchContext::~SearchContext()
 {
     stop();
     clear();
+
+    config_.save();
 
     CloseHandle(mutex_);
 }
@@ -54,7 +60,7 @@ void SearchContext::clear()
     list_.clear();
 }
 
-void SearchContext::append(SearchEntry &entry)
+void SearchContext::append(int id, SearchEntry &entry)
 {
     lock();
 
@@ -66,18 +72,27 @@ void SearchContext::append(SearchEntry &entry)
 
     unlock();
 
-    poke(str);
+    poke(id, str, false);
 
     //OutputDebugString("someone appended: ");
     //OutputDebugString(entry.filename_.c_str());
     //OutputDebugString("\n");
 }
 
-void SearchContext::poke(const std::string &str)
+void SearchContext::poke(int id, const std::string &str, bool finished)
 {
+    if(!str.empty())
+        pokeFlowControl_ += str;
+
     if(window_ != INVALID_HANDLE_VALUE)
     {
-        SendMessage(window_, WM_SEARCHCONTEXT_POKE, 0, (LPARAM)str.c_str());
+        UINT now = GetTickCount();
+        if(finished || (now > (lastPoke_ + (1000 / POKES_PER_SECOND))))
+        {
+            lastPoke_ = now;
+            PostMessage(window_, WM_SEARCHCONTEXT_POKE, id, (LPARAM)strdup(pokeFlowControl_.c_str()));
+            pokeFlowControl_.clear();
+        }
     }
 }
 
@@ -97,23 +112,16 @@ static bool filenameMatchesFilespecs(const std::string &filename, const StringLi
 
 #define stopCheck() { if(stop_) goto cleanup; }
 
-bool SearchContext::searchFile(const std::string &filename, SearchEntry &entry)
+void SearchContext::searchFile(int id, const std::string &filename, SearchEntry &entry)
 {
-    bool ret = false;
-    stopCheck();
-
     if(!filenameMatchesFilespecs(filename, params_.filespecs))
-        return false;
+        return;
 
     entry.filename_ = filename;
     entry.match_ = "horee crap this is some sweet matching 456 text";
-
     static int a = 0;
     entry.line_ = a++;
-    ret = true;
-
-cleanup:
-    return ret;
+    append(id, entry);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -140,6 +148,8 @@ void SearchContext::search(const SearchParams &params)
 
 void SearchContext::stop()
 {
+    searchID_++;
+
     if(thread_ != INVALID_HANDLE_VALUE)
     {
         stop_ = 1;
@@ -151,6 +161,7 @@ void SearchContext::stop()
 
 void SearchContext::searchProc()
 {
+    int id = searchID_;
     HANDLE findHandle = INVALID_HANDLE_VALUE;
     StringList paths;
     SearchEntry entry;
@@ -187,28 +198,35 @@ void SearchContext::searchProc()
             }
             else
             {
-                if(searchFile(filename, entry))
-                    append(entry);
+                searchFile(id, filename, entry);
             }
         }
     }
 
-    for(int i=0; i<5000; i++)
+#if 1
+    for(int i=0; i<10000; i++)
     {
         char buffer[32];
         sprintf(buffer, "noob %d", i);
         entry.filename_ = buffer;
         entry.line_ = i;
         entry.match_ = "bro this matches bro";
-        append(entry);
+        append(id, entry);
+
+        Sleep(10);
+
+        stopCheck();
     }
+#endif
 
 cleanup:
+    if(!stop_)
+        poke(id, "", true);
     if(findHandle != INVALID_HANDLE_VALUE)
     {
         FindClose(findHandle);
     }
-    return;
+    pokeFlowControl_ = "";
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -232,6 +250,12 @@ int SearchContext::count()
 {
     ScopedMutex lock(mutex_);
     return list_.size();
+}
+
+int SearchContext::searchID()
+{
+    ScopedMutex lock(mutex_);
+    return searchID_;
 }
 
 // ------------------------------------------------------------------------------------------------

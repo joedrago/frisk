@@ -3,12 +3,9 @@
 
 #include <windows.h>
 
-#include <string>
-#include <vector>
+#include "SearchConfig.h"
 
 #define WM_SEARCHCONTEXT_POKE (WM_USER+1)
-
-typedef std::vector<std::string> StringList;
 
 class ScopedMutex
 {
@@ -50,10 +47,10 @@ public:
 
     void clear();
 
-    void append(SearchEntry &entry);         // takes ownership
+    void append(int id, SearchEntry &entry);         // takes ownership
     void search(const SearchParams &params); // copies
     void stop();
-    void poke(const std::string &str);
+    void poke(int id, const std::string &str, bool finished);
 
     void lock();
     SearchList &list();
@@ -61,18 +58,25 @@ public:
 
     int count();
 
+    SearchConfig &config() { return config_; }
+    int searchID();
+
     void searchProc();
 protected:
-    bool searchFile(const std::string &filename, SearchEntry &entry);
+    void searchFile(int id, const std::string &filename, SearchEntry &entry);
 
     HWND window_;
 
     HANDLE mutex_;
     HANDLE thread_;
     int stop_;
+    int searchID_;
     int offset_;
+    unsigned int lastPoke_;
+    std::string pokeFlowControl_;
     SearchList list_;
     SearchParams params_;
+    SearchConfig config_;
 };
 
 #endif

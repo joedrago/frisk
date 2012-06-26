@@ -11,6 +11,7 @@
 #define IDR_MAINFRAME                   128
 #define IDC_MATCH                       1003
 #define IDC_PATHS                       1004
+#define IDC_PATH                        1004
 #define IDC_FILESPEC                    1005
 #define IDC_SEARCH                      1006
 #define IDC_OUTPUT                      1008

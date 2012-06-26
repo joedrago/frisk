@@ -16,11 +16,17 @@ public:
 
     void show();
 
-    void updateOutputPos();
+    void outputClear();
+    void outputUpdatePos();
+
+    void configToControls();
+    void controlsToConfig();
+    void windowToConfig();
 
     INT_PTR onInitDialog(HWND hDlg, WPARAM wParam, LPARAM lParam);
     INT_PTR onPoke(WPARAM wParam, LPARAM lParam);
     INT_PTR onNotify(WPARAM wParam, LPARAM lParam);
+    INT_PTR onMove(WPARAM wParam, LPARAM lParam);
     INT_PTR onSize(WPARAM wParam, LPARAM lParam);
     INT_PTR onShow(WPARAM wParam, LPARAM lParam);
 
@@ -30,8 +36,12 @@ public:
 protected:
     HINSTANCE instance_;
     HWND dialog_;
-    HWND richEdit_;
+    HWND outputCtrl_;
+    HWND pathCtrl_;
+    HWND filespecCtrl_;
+    HWND matchCtrl_;
     SearchContext *context_;
+    SearchConfig *config_;
 };
 
 #endif
