@@ -185,8 +185,6 @@ static char *nextToken(char **p, char sep)
 
 bool SearchContext::searchFile(int id, const std::string &filename, RegexList &filespecRegexes, pcre *matchRegex, SearchEntry &entry)
 {
-	int ovector[100];
-
     bool matchesOneFilespec = false;
     for(RegexList::iterator it = filespecRegexes.begin(); it != filespecRegexes.end(); it++)
     {
@@ -214,6 +212,7 @@ bool SearchContext::searchFile(int id, const std::string &filename, RegexList &f
     {
 		char *originalLine = line;
 		std::string replacedLine;
+		int ovector[100];
 		do
 		{
 			bool matches = false;
@@ -222,9 +221,12 @@ bool SearchContext::searchFile(int id, const std::string &filename, RegexList &f
 
 			if(matchRegex)
 			{
-				if(pcre_exec(matchRegex, NULL, line, strlen(line), 0, 0, NULL, 0) >= 0)
+				int rc;
+				if(rc = pcre_exec(matchRegex, 0, line, strlen(line), 0, 0, ovector, sizeof(ovector)) >= 0)
 				{
 					matches = true;
+					matchPos = ovector[0];
+					matchLen = ovector[1] - ovector[0];
 				}
 			}
 			else
