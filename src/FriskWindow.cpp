@@ -9,7 +9,7 @@
 #include "SettingsWindow.h"
 #include "resource.h"
 
-#include <Shlobj.h>
+#include <Commdlg.h>
 
 static FriskWindow *sWindow = NULL;
 
@@ -498,25 +498,32 @@ void FriskWindow::onSettings()
 
 void FriskWindow::onBrowse()
 {
-    BROWSEINFO bi = { 0 };
-    bi.lpszTitle = "Pick a Directory";
-    bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_EDITBOX | BIF_NEWDIALOGSTYLE | BIF_NONEWFOLDERBUTTON;
-    LPITEMIDLIST pidl = SHBrowseForFolder ( &bi );
-    if ( pidl != 0 )
+    std::string initialPath = getWindowText(pathCtrl_);
+    char filename[MAX_PATH] = "\r";
+    OPENFILENAME ofn = {0};
+    ofn.lStructSize = sizeof(OPENFILENAME);
+    ofn.hwndOwner = dialog_;
+    ofn.hInstance = instance_;
+    ofn.lpstrFile = filename;
+    ofn.nMaxFile = sizeof(filename);
+    ofn.lpstrFilter = "Folders\0*.nosuchextensionevar\0";
+    ofn.nFilterIndex = 1;
+    ofn.lpstrInitialDir = initialPath.c_str();
+    ofn.Flags = OFN_HIDEREADONLY | OFN_NOVALIDATE | OFN_PATHMUSTEXIST | OFN_READONLY;
+    if(GetOpenFileName(&ofn))
     {
-        // get the name of the folder
-        char path[MAX_PATH];
-        if ( SHGetPathFromIDList ( pidl, path ) )
+        std::string fn = filename;
+        if(!fn.empty())
         {
-            setWindowText(pathCtrl_, std::string(path));
-        }
-
-        // free memory used
-        IMalloc * imalloc = 0;
-        if ( SUCCEEDED( SHGetMalloc ( &imalloc )) )
-        {
-            imalloc->Free ( pidl );
-            imalloc->Release ( );
+            if(fn[fn.length() - 1] == '\r')
+            {
+                fn.resize(fn.length() - 1);
+            }
+            if(fn[fn.length() - 1] == '\\')
+            {
+                fn.resize(fn.length() - 1);
+            }
+            setWindowText(pathCtrl_, fn);
         }
     }
 }
