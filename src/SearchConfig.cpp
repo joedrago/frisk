@@ -202,7 +202,7 @@ void SearchConfig::load()
     jsonGetStringList(json, "matches", matches_);
     jsonGetStringList(json, "paths", paths_);
     jsonGetStringList(json, "filespecs", filespecs_);
-	jsonGetStringList(json, "replaces", replaces_);
+    jsonGetStringList(json, "replaces", replaces_);
     cJSON_Delete(json);
 }
 
@@ -226,7 +226,7 @@ void SearchConfig::save()
     jsonSetStringList(json, "matches", matches_);
     jsonSetStringList(json, "paths", paths_);
     jsonSetStringList(json, "filespecs", filespecs_);
-	jsonSetStringList(json, "replaces", replaces_);
+    jsonSetStringList(json, "replaces", replaces_);
 
     char *jsonText = cJSON_Print(json);
     writeEntireFile(filename, jsonText);

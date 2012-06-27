@@ -51,7 +51,7 @@ struct SearchParams
     StringList paths;
     StringList filespecs;
     std::string match;
-	std::string replace;
+    std::string replace;
     int flags;
 };
 

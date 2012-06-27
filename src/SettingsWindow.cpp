@@ -79,11 +79,11 @@ void SettingsWindow::onBackgroundColor()
 
 static INT_PTR CALLBACK SettingsProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	switch (message)
-	{
+    switch (message)
+    {
         processMessageH(WM_INITDIALOG, onInitDialog);
 
-	    case WM_COMMAND:
+        case WM_COMMAND:
             switch(LOWORD(wParam))
             {
                 processCommand(IDOK, onOK);
@@ -91,8 +91,8 @@ static INT_PTR CALLBACK SettingsProc(HWND hDlg, UINT message, WPARAM wParam, LPA
                 processCommand(IDC_COLOR_TEXT, onTextColor);
                 processCommand(IDC_COLOR_BG, onBackgroundColor);
             };
-	}
-	return (INT_PTR)FALSE;
+    }
+    return (INT_PTR)FALSE;
 }
 
 bool SettingsWindow::show()

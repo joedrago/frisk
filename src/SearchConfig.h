@@ -22,8 +22,8 @@ enum SearchFlag
     SF_FILESPEC_CASE_SENSITIVE = (1 << 2),
     SF_MATCH_REGEXES           = (1 << 3),
     SF_MATCH_CASE_SENSITIVE    = (1 << 4),
-	SF_REPLACE                 = (1 << 5),
-	SF_BACKUP                  = (1 << 6),
+    SF_REPLACE                 = (1 << 5),
+    SF_BACKUP                  = (1 << 6),
 
     SF_COUNT
 };
@@ -33,7 +33,7 @@ class SearchConfig
 public:
     SearchConfig();
     ~SearchConfig();
-    
+
     void load();
     void save();
 
@@ -42,7 +42,7 @@ public:
     StringList matches_;
     StringList paths_;
     StringList filespecs_;
-	StringList replaces_;
+    StringList replaces_;
 
     int windowX_;
     int windowY_;

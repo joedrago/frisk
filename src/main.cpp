@@ -17,5 +17,5 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdL
 
     FriskWindow window(hInstance);
     window.show();
-	return 0;
+    return 0;
 }

@@ -39,16 +39,16 @@ public:
     INT_PTR onSize(WPARAM wParam, LPARAM lParam);
     INT_PTR onShow(WPARAM wParam, LPARAM lParam);
 
-	void search(int extraFlags);
+    void search(int extraFlags);
 
     void onCancel();
     void onSearch();
-	void onReplace();
+    void onReplace();
     void onDoubleClickOutput();
     void onSettings();
 protected:
     HINSTANCE instance_;
-	HFONT font_;
+    HFONT font_;
     HWND dialog_;
     HWND outputCtrl_;
     HWND pathCtrl_;
