@@ -23,7 +23,7 @@ static void checkCtrl(HWND ctrl, bool checked)
     PostMessage(ctrl, BM_SETCHECK, checked ? BST_CHECKED : BST_UNCHECKED, 0);
 }
 
-static std::string getWindowText(HWND ctrl)
+std::string getWindowText(HWND ctrl)
 {
     std::string str;
     int len = GetWindowTextLength(ctrl);
@@ -36,7 +36,7 @@ static std::string getWindowText(HWND ctrl)
     return str;
 }
 
-static void setWindowText(HWND ctrl, const std::string &s)
+void setWindowText(HWND ctrl, const std::string &s)
 {
     SetWindowText(ctrl, s.c_str());
 }
@@ -229,6 +229,18 @@ INT_PTR FriskWindow::onInitDialog(HWND hDlg, WPARAM wParam, LPARAM lParam)
     configToControls();
     updateState();
 
+    HICON hIcon;
+    hIcon = (HICON)LoadImage(instance_,
+        MAKEINTRESOURCE(IDI_FRISK),
+        IMAGE_ICON,
+        GetSystemMetrics(SM_CXSMICON),
+        GetSystemMetrics(SM_CYSMICON),
+        0);
+    if(hIcon)
+    {
+        SendMessage(dialog_, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+    }
+
     RECT windowRect;
     GetWindowRect(dialog_, &windowRect);
     int width = windowRect.right - windowRect.left;
@@ -390,6 +402,7 @@ void FriskWindow::onSettings()
     if(settings.show())
     {
         outputUpdateColors();
+        config_->save();
     }
 }
 
@@ -413,7 +426,22 @@ void FriskWindow::onDoubleClickOutput()
     }
     if(entry)
     {
-        MessageBox(dialog_, entry->filename_.c_str(), "you clicked on", MB_OK);
+        //std::string cmd = "c:\\vim\\vim73\\gvim.exe --remote-silent +!LINE! +zz \"!FILENAME!\"";
+        std::string cmd = config_->cmdTemplate_;
+        char lineBuffer[32];
+        sprintf(lineBuffer, "%d", entry->line_);
+        replaceAll(cmd, "!LINE!", lineBuffer);
+        replaceAll(cmd, "!FILENAME!", entry->filename_.c_str());
+
+        PROCESS_INFORMATION pi;
+        STARTUPINFO si;
+        ZeroMemory(&si, sizeof(STARTUPINFO));
+        si.cb = sizeof(STARTUPINFO);
+        if(CreateProcess(NULL, (char *)cmd.c_str(), NULL, NULL, TRUE, DETACHED_PROCESS, NULL, NULL, &si, &pi))
+        {
+            CloseHandle(pi.hProcess);
+            CloseHandle(pi.hThread);
+        }
     }
     context_->unlock();
 }

@@ -27,6 +27,8 @@ public:
     void load();
     void save();
 
+    std::string cmdTemplate_;
+
     StringList matches_;
     StringList paths_;
     StringList filespecs_;

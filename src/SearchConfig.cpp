@@ -98,6 +98,15 @@ static bool jsonSetInt(cJSON *json, const char *k, int v)
     return true;
 }
 
+static bool jsonSetString(cJSON *json, const char *k, const std::string &v)
+{
+    if(json->type != cJSON_Object)
+        return false;
+
+    cJSON_AddStringToObject(json, k, v.c_str());
+    return true;
+}
+
 static bool jsonGetStringList(cJSON *json, const char *k, StringList &v)
 {
     if(json->type != cJSON_Object)
@@ -149,8 +158,9 @@ SearchConfig::SearchConfig()
     windowH_ = 0;
     windowMaximized_ = 0;
     flags_ = SF_RECURSIVE;
-    textColor_ = RGB(255, 255, 255);
-    backgroundColor_ = RGB(0, 0, 0);
+    textColor_ = RGB(0, 0, 0);
+    backgroundColor_ = RGB(224, 224, 224);
+    cmdTemplate_ = "notepad.exe \"!FILENAME!\"";
 }
 
 SearchConfig::~SearchConfig()
@@ -181,6 +191,7 @@ void SearchConfig::load()
     jsonGetInt(json, "flags", flags_);
     jsonGetInt(json, "textColor", textColor_);
     jsonGetInt(json, "backgroundColor", backgroundColor_);
+    jsonGetString(json, "cmdTemplate", cmdTemplate_);
     jsonGetStringList(json, "matches", matches_);
     jsonGetStringList(json, "paths", paths_);
     jsonGetStringList(json, "filespecs", filespecs_);
@@ -203,6 +214,7 @@ void SearchConfig::save()
     jsonSetInt(json, "flags", flags_);
     jsonSetInt(json, "textColor", textColor_);
     jsonSetInt(json, "backgroundColor", backgroundColor_);
+    jsonSetString(json, "cmdTemplate", cmdTemplate_);
     jsonSetStringList(json, "matches", matches_);
     jsonSetStringList(json, "paths", paths_);
     jsonSetStringList(json, "filespecs", filespecs_);

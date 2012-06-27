@@ -106,7 +106,7 @@ void SearchContext::poke(int id, const std::string &str, bool finished)
 
 // ------------------------------------------------------------------------------------------------
 
-static void replaceAll(std::string &s, const char *f, const char *r)
+void replaceAll(std::string &s, const char *f, const char *r)
 {
     int flen = strlen(f);
     int rlen = strlen(r);
@@ -153,7 +153,7 @@ static char * strstri(char * haystack, const char * needle)
     return NULL;
 }
 
-void SearchContext::searchFile(int id, const std::string &filename, RegexList &filespecRegexes, pcre *matchRegex, SearchEntry &entry)
+bool SearchContext::searchFile(int id, const std::string &filename, RegexList &filespecRegexes, pcre *matchRegex, SearchEntry &entry)
 {
     bool matchesOneFilespec = false;
     for(RegexList::iterator it = filespecRegexes.begin(); it != filespecRegexes.end(); it++)
@@ -166,11 +166,11 @@ void SearchContext::searchFile(int id, const std::string &filename, RegexList &f
         }
     }
     if(!matchesOneFilespec)
-        return;
+        return false;
 
     std::string contents;
     if(!readEntireFile(filename, contents))
-        return;
+        return false;
 
     int lineNumber = 1;
     const char *seps = "\n";
@@ -200,6 +200,7 @@ void SearchContext::searchFile(int id, const std::string &filename, RegexList &f
             append(id, entry);
         }
     }
+    return true;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -247,6 +248,10 @@ void SearchContext::searchProc()
     RegexList filespecRegexes;
     pcre *matchRegex = NULL;
 
+    int directoriesSearched = 0;
+    int filesSearched = 0;
+    int filesSkipped = 0;
+
     bool filespecUsesRegexes = ((params_.flags & SF_FILESPEC_REGEXES) != 0);
     bool matchUsesRegexes    = ((params_.flags & SF_MATCH_REGEXES) != 0);
 
@@ -291,6 +296,7 @@ void SearchContext::searchProc()
 
     while(!paths.empty())
     {
+        directoriesSearched++;
         stopCheck();
 
         std::string currentSearchPath = paths.back();
@@ -307,7 +313,10 @@ void SearchContext::searchProc()
         {
             stopCheck();
             if((wfd.cFileName[0] == '.') || (wfd.cFileName[0] == 0))
+            {
+                filesSkipped++;
                 continue;
+            }
 
             bool isDirectory = ((wfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
             std::string filename = currentSearchPath;
@@ -316,30 +325,18 @@ void SearchContext::searchProc()
 
             if(isDirectory)
             {
-                paths.push_back(filename);
+                if(params_.flags & SF_RECURSIVE)
+                    paths.push_back(filename);
             }
             else
             {
-                searchFile(id, filename, filespecRegexes, matchRegex, entry);
+                if(searchFile(id, filename, filespecRegexes, matchRegex, entry))
+                    filesSearched++;
+                else
+                    filesSkipped++;
             }
         }
     }
-
-#if 0
-    for(int i=0; i<10000; i++)
-    {
-        char buffer[32];
-        sprintf(buffer, "noob %d", i);
-        entry.filename_ = buffer;
-        entry.line_ = i;
-        entry.match_ = "bro this matches bro";
-        append(id, entry);
-
-        Sleep(10);
-
-        stopCheck();
-    }
-#endif
 
 cleanup:
     for(RegexList::iterator it = filespecRegexes.begin(); it != filespecRegexes.end(); it++)
@@ -350,7 +347,11 @@ cleanup:
         pcre_free(matchRegex);
     filespecRegexes.clear();
     if(!stop_)
-        poke(id, "", true);
+    {
+        char buffer[256];
+        sprintf(buffer, "\n%d directories scanned, %d files searched, %d files skipped", directoriesSearched, filesSearched, filesSkipped);
+        poke(id, buffer, true);
+    }
     if(findHandle != INVALID_HANDLE_VALUE)
     {
         FindClose(findHandle);

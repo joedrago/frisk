@@ -10,6 +10,10 @@
 #define WM_SEARCHCONTEXT_STATE (WM_USER+1)
 #define WM_SEARCHCONTEXT_POKE (WM_USER+2)
 
+void replaceAll(std::string &s, const char *f, const char *r);
+std::string getWindowText(HWND ctrl);
+void setWindowText(HWND ctrl, const std::string &s);
+
 class ScopedMutex
 {
 public:
@@ -69,7 +73,7 @@ public:
 
     void searchProc();
 protected:
-    void searchFile(int id, const std::string &filename, RegexList &filespecRegexes, pcre *matchRegex, SearchEntry &entry);
+    bool searchFile(int id, const std::string &filename, RegexList &filespecRegexes, pcre *matchRegex, SearchEntry &entry);
 
     HWND window_;
 

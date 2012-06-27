@@ -24,14 +24,15 @@ SettingsWindow::~SettingsWindow()
 INT_PTR SettingsWindow::onInitDialog(HWND hDlg, WPARAM wParam, LPARAM lParam)
 {
     dialog_ = hDlg;
+    setWindowText(GetDlgItem(dialog_, IDC_CMD), config_->cmdTemplate_.c_str());
     return TRUE;
 }
-
 
 void SettingsWindow::onOK()
 {
     config_->textColor_ = textColor_;
     config_->backgroundColor_ = backgroundColor_;
+    config_->cmdTemplate_ = getWindowText(GetDlgItem(dialog_, IDC_CMD));
 
     EndDialog(dialog_, IDOK);
 }
