@@ -1,3 +1,10 @@
+// ---------------------------------------------------------------------------
+//                   Copyright Joe Drago 2012.
+//         Distributed under the Boost Software License, Version 1.0.
+//            (See accompanying file LICENSE_1_0.txt or copy at
+//                  http://www.boost.org/LICENSE_1_0.txt)
+// ---------------------------------------------------------------------------
+
 #ifndef FRISKWINDOW_H
 #define FRISKWINDOW_H
 
@@ -32,18 +39,23 @@ public:
     INT_PTR onSize(WPARAM wParam, LPARAM lParam);
     INT_PTR onShow(WPARAM wParam, LPARAM lParam);
 
+	void search(int extraFlags);
+
     void onCancel();
     void onSearch();
+	void onReplace();
     void onDoubleClickOutput();
     void onSettings();
 protected:
     HINSTANCE instance_;
+	HFONT font_;
     HWND dialog_;
     HWND outputCtrl_;
     HWND pathCtrl_;
     HWND filespecCtrl_;
     HWND matchCtrl_;
     HWND stateCtrl_;
+    HWND replaceCtrl_;
     SearchContext *context_;
     SearchConfig *config_;
     bool running_;

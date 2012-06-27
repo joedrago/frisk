@@ -1,3 +1,10 @@
+// ---------------------------------------------------------------------------
+//                   Copyright Joe Drago 2012.
+//         Distributed under the Boost Software License, Version 1.0.
+//            (See accompanying file LICENSE_1_0.txt or copy at
+//                  http://www.boost.org/LICENSE_1_0.txt)
+// ---------------------------------------------------------------------------
+
 #include "SearchConfig.h"
 
 #include <windows.h>
@@ -52,7 +59,7 @@ bool readEntireFile(const std::string &filename, std::string &contents)
     return true;
 }
 
-static bool writeEntireFile(const std::string &filename, const std::string &contents)
+bool writeEntireFile(const std::string &filename, const std::string &contents)
 {
     FILE *f = fopen(filename.c_str(), "wb");
     if(!f)
@@ -195,6 +202,7 @@ void SearchConfig::load()
     jsonGetStringList(json, "matches", matches_);
     jsonGetStringList(json, "paths", paths_);
     jsonGetStringList(json, "filespecs", filespecs_);
+	jsonGetStringList(json, "replaces", replaces_);
     cJSON_Delete(json);
 }
 
@@ -218,6 +226,7 @@ void SearchConfig::save()
     jsonSetStringList(json, "matches", matches_);
     jsonSetStringList(json, "paths", paths_);
     jsonSetStringList(json, "filespecs", filespecs_);
+	jsonSetStringList(json, "replaces", replaces_);
 
     char *jsonText = cJSON_Print(json);
     writeEntireFile(filename, jsonText);

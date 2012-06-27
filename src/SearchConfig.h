@@ -1,3 +1,10 @@
+// ---------------------------------------------------------------------------
+//                   Copyright Joe Drago 2012.
+//         Distributed under the Boost Software License, Version 1.0.
+//            (See accompanying file LICENSE_1_0.txt or copy at
+//                  http://www.boost.org/LICENSE_1_0.txt)
+// ---------------------------------------------------------------------------
+
 #ifndef SEARCHCONFIG_H
 #define SEARCHCONFIG_H
 
@@ -6,6 +13,7 @@
 
 typedef std::vector<std::string> StringList;
 bool readEntireFile(const std::string &filename, std::string &contents);
+bool writeEntireFile(const std::string &filename, const std::string &contents);
 
 enum SearchFlag
 {
@@ -14,6 +22,8 @@ enum SearchFlag
     SF_FILESPEC_CASE_SENSITIVE = (1 << 2),
     SF_MATCH_REGEXES           = (1 << 3),
     SF_MATCH_CASE_SENSITIVE    = (1 << 4),
+	SF_REPLACE                 = (1 << 5),
+	SF_BACKUP                  = (1 << 6),
 
     SF_COUNT
 };
@@ -32,6 +42,7 @@ public:
     StringList matches_;
     StringList paths_;
     StringList filespecs_;
+	StringList replaces_;
 
     int windowX_;
     int windowY_;

@@ -1,3 +1,10 @@
+// ---------------------------------------------------------------------------
+//                   Copyright Joe Drago 2012.
+//         Distributed under the Boost Software License, Version 1.0.
+//            (See accompanying file LICENSE_1_0.txt or copy at
+//                  http://www.boost.org/LICENSE_1_0.txt)
+// ---------------------------------------------------------------------------
+
 #include "FriskWindow.h"
 #include "SettingsWindow.h"
 #include "resource.h"
@@ -99,15 +106,22 @@ FriskWindow::FriskWindow(HINSTANCE instance)
 , pathCtrl_((HWND)INVALID_HANDLE_VALUE)
 , filespecCtrl_((HWND)INVALID_HANDLE_VALUE)
 , matchCtrl_((HWND)INVALID_HANDLE_VALUE)
+, replaceCtrl_((HWND)INVALID_HANDLE_VALUE)
 , context_(NULL)
 , running_(false)
 , closing_(false)
 {
     sWindow = this;
+
+	HDC dc = GetDC(NULL);
+	font_ = CreateFont(-MulDiv(8, GetDeviceCaps(dc, LOGPIXELSY), 72), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS,
+		CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, VARIABLE_PITCH, "Courier New");
+	ReleaseDC(NULL, dc);
 }
 
 FriskWindow::~FriskWindow()
 {
+	DeleteObject(font_);
     delete context_;
     sWindow = NULL;
 }
@@ -131,12 +145,12 @@ void FriskWindow::outputUpdatePos()
     GetClientRect(dialog_, &clientRect);
     GetWindowRect(outputCtrl_, &outputRect);
     POINT outputPos;
-    outputPos.x = 0;//outputRect.left;
+    outputPos.x = outputRect.left;
     outputPos.y = outputRect.top;
     ScreenToClient(dialog_, &outputPos);
 
     //outputRect.right = 5;
-    MoveWindow(outputCtrl_, 0, outputPos.y, clientRect.right + 2, clientRect.bottom - outputPos.y + 2, TRUE);
+    MoveWindow(outputCtrl_, outputPos.x, /*outputPos.y */ 0, clientRect.right - outputPos.x + 2, clientRect.bottom - outputPos.y + 2, TRUE);
 }
 
 void FriskWindow::outputUpdateColors()
@@ -158,6 +172,7 @@ void FriskWindow::configToControls()
     comboSet(pathCtrl_, config_->paths_);
     comboSet(matchCtrl_, config_->matches_);
     comboSet(filespecCtrl_, config_->filespecs_);
+	comboSet(replaceCtrl_, config_->replaces_);
 
     checkCtrl(GetDlgItem(dialog_, IDC_RECURSIVE),      0 != (config_->flags_ & SF_RECURSIVE));
     checkCtrl(GetDlgItem(dialog_, IDC_FILESPEC_REGEX), 0 != (config_->flags_ & SF_FILESPEC_REGEXES));
@@ -171,6 +186,7 @@ void FriskWindow::controlsToConfig()
     comboLRU(pathCtrl_, config_->paths_, 10);
     comboLRU(matchCtrl_, config_->matches_, 10);
     comboLRU(filespecCtrl_, config_->filespecs_, 10);
+	comboLRU(replaceCtrl_, config_->replaces_, 10);
 
     config_->flags_ = 0;
     if(ctrlIsChecked(GetDlgItem(dialog_, IDC_RECURSIVE)))
@@ -214,6 +230,19 @@ INT_PTR FriskWindow::onInitDialog(HWND hDlg, WPARAM wParam, LPARAM lParam)
     filespecCtrl_ = GetDlgItem(hDlg, IDC_FILESPEC);
     matchCtrl_    = GetDlgItem(hDlg, IDC_MATCH);
     stateCtrl_    = GetDlgItem(hDlg, IDC_STATE);
+	replaceCtrl_  = GetDlgItem(hDlg, IDC_REPLACE);
+
+	SendMessage(pathCtrl_,     WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+	SendMessage(filespecCtrl_, WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+	SendMessage(matchCtrl_,    WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+	SendMessage(stateCtrl_,    WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+	SendMessage(replaceCtrl_,  WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+
+	SendMessage(GetDlgItem(dialog_, IDC_RECURSIVE),      WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+	SendMessage(GetDlgItem(dialog_, IDC_FILESPEC_REGEX), WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+	SendMessage(GetDlgItem(dialog_, IDC_FILESPEC_CASE),  WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+	SendMessage(GetDlgItem(dialog_, IDC_MATCH_REGEXES),  WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+	SendMessage(GetDlgItem(dialog_, IDC_MATCH_CASE),     WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
 
     bool shouldMaximize = (config_->windowMaximized_ != 0);
 
@@ -370,7 +399,7 @@ void FriskWindow::onCancel()
     EndDialog(dialog_, IDCANCEL);
 }
 
-void FriskWindow::onSearch()
+void FriskWindow::search(int extraFlags)
 {
     if(!hasWindowText(matchCtrl_)
     || !hasWindowText(pathCtrl_)
@@ -387,13 +416,25 @@ void FriskWindow::onSearch()
     outputClear();
 
     SearchParams params;
-    params.flags = config_->flags_;
+    params.flags = config_->flags_ | extraFlags;
     params.match = config_->matches_[0];
+	params.replace = config_->replaces_[0];
     split(config_->paths_[0], ";", params.paths);
     split(config_->filespecs_[0], ";", params.filespecs);
     context_->search(params);
 
     updateState();
+}
+
+void FriskWindow::onSearch()
+{
+	search(0);
+}
+
+void FriskWindow::onReplace()
+{
+	if(IDYES == MessageBox(dialog_, "Are you SURE you want to perform a Replace in Files?", "Confirmation", MB_YESNO))
+		search(SF_REPLACE);
 }
 
 void FriskWindow::onSettings()
@@ -465,6 +506,7 @@ static INT_PTR CALLBACK FriskProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM
             {
                 processCommand(IDCANCEL, onCancel);
                 processCommand(IDC_SEARCH, onSearch);
+                processCommand(IDC_DOREPLACE, onReplace);
                 processCommand(IDC_SETTINGS, onSettings);
             };
 	}

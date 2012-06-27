@@ -1,3 +1,10 @@
+// ---------------------------------------------------------------------------
+//                   Copyright Joe Drago 2012.
+//         Distributed under the Boost Software License, Version 1.0.
+//            (See accompanying file LICENSE_1_0.txt or copy at
+//                  http://www.boost.org/LICENSE_1_0.txt)
+// ---------------------------------------------------------------------------
+
 #include "SearchContext.h"
 
 #include <algorithm>
@@ -153,8 +160,33 @@ static char * strstri(char * haystack, const char * needle)
     return NULL;
 }
 
+static char *nextToken(char **p, char sep)
+{
+	char *front = *p;
+	if(!front || !*front)
+		return NULL;
+
+	char *end = front;
+	while(*end && (*end != sep))
+	{
+		end++;
+	}
+	if(*end == sep)
+	{
+		*end = 0;
+		*p = end+1;
+	}
+	else
+	{
+		*p = NULL;
+	}
+	return front;
+}
+
 bool SearchContext::searchFile(int id, const std::string &filename, RegexList &filespecRegexes, pcre *matchRegex, SearchEntry &entry)
 {
+	int ovector[100];
+
     bool matchesOneFilespec = false;
     for(RegexList::iterator it = filespecRegexes.begin(); it != filespecRegexes.end(); it++)
     {
@@ -172,34 +204,104 @@ bool SearchContext::searchFile(int id, const std::string &filename, RegexList &f
     if(!readEntireFile(filename, contents))
         return false;
 
-    int lineNumber = 1;
-    const char *seps = "\n";
-    for(char *line = strtok(&contents[0], seps); line != NULL; lineNumber++, line = strtok(NULL, seps))
-    {
-        bool matches = false;
-        if(matchRegex)
-        {
-            if(pcre_exec(matchRegex, NULL, line, strlen(line), 0, 0, NULL, 0) >= 0)
-            {
-                matches = true;
-            }
-        }
-        else
-        {
-            if(params_.flags & SF_MATCH_CASE_SENSITIVE)
-                matches = ( strstr(line, params_.match.c_str()) != NULL );
-            else
-                matches = ( strstri(line, params_.match.c_str()) != NULL );
-        }
+	std::string workBuffer = contents;
+	std::string updatedContents;
 
-        if(matches)
-        {
-            entry.filename_ = filename;
-            entry.match_ = line;
-            entry.line_ = lineNumber;
-            append(id, entry);
-        }
-    }
+    int lineNumber = 1;
+	char *p = &workBuffer[0];
+	char *line;
+    while((line = nextToken(&p, '\n')) != NULL)
+    {
+		char *originalLine = line;
+		std::string replacedLine;
+		do
+		{
+			bool matches = false;
+			int matchPos;
+			int matchLen;
+
+			if(matchRegex)
+			{
+				if(pcre_exec(matchRegex, NULL, line, strlen(line), 0, 0, NULL, 0) >= 0)
+				{
+					matches = true;
+				}
+			}
+			else
+			{
+				char *match;
+				if(params_.flags & SF_MATCH_CASE_SENSITIVE)
+					match = strstr(line, params_.match.c_str());
+				else
+					match = strstri(line, params_.match.c_str());
+				if(match != NULL)
+				{
+					matches = true;
+					matchPos = match - line;
+					matchLen = params_.match.length();
+				}
+			}
+
+			if(params_.flags & SF_REPLACE)
+			{
+				if(matches)
+				{
+					replacedLine.append(line, matchPos);
+					replacedLine.append(params_.replace);
+					line += matchPos + matchLen;
+				}
+				else
+				{
+					break;
+				}
+			}
+			else
+			{
+				if(matches)
+				{
+					entry.filename_ = filename;
+					entry.match_ = line;
+					entry.line_ = lineNumber;
+					append(id, entry);
+				}
+				break; // stop searching this line
+			}
+		}
+		while(*line);
+
+		if(params_.flags & SF_REPLACE)
+		{
+			if(line && *line)
+				replacedLine += line;
+			if(replacedLine != originalLine)
+			{
+				entry.filename_ = filename;
+				entry.match_ = replacedLine;
+				entry.line_ = lineNumber;
+				append(id, entry);
+			}
+			replacedLine += "\n";
+			updatedContents += replacedLine;
+		}
+	}
+	if(params_.flags & SF_REPLACE)
+	{
+		if((contents != updatedContents))
+		{
+			if(writeEntireFile(filename, updatedContents))
+			{
+				return true;
+			}
+			else
+			{
+				std::string err = "WARNING: Couldn't write to file: ";
+				err += filename;
+				err += "\n";
+				poke(id, err.c_str(), false);
+			}
+		}
+		return false;
+	}
     return true;
 }
 
@@ -349,7 +451,10 @@ cleanup:
     if(!stop_)
     {
         char buffer[256];
-        sprintf(buffer, "\n%d directories scanned, %d files searched, %d files skipped", directoriesSearched, filesSearched, filesSkipped);
+		if(params_.flags & SF_REPLACE)
+			sprintf(buffer, "\n%d directories scanned, %d files updated, %d files skipped", directoriesSearched, filesSearched, filesSkipped);
+		else
+			sprintf(buffer, "\n%d directories scanned, %d files searched, %d files skipped", directoriesSearched, filesSearched, filesSkipped);
         poke(id, buffer, true);
     }
     if(findHandle != INVALID_HANDLE_VALUE)
