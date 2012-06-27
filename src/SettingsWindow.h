@@ -31,6 +31,8 @@ public:
     void onTextColor();
     void onBackgroundColor();
     void onHighlightColor();
+    void onCmdNotepad();
+    void onCmdAssoc();
 
 protected:
     HINSTANCE instance_;

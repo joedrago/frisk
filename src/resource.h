@@ -26,3 +26,5 @@
 #define IDC_CMD                                 1020
 #define IDC_COLOR_HIGHLIGHT                     1022
 #define IDC_TEXTSIZE                            1024
+#define IDC_CMD_ASSOC                           1028
+#define IDC_CMD_NOTEPAD                         1029

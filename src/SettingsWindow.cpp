@@ -102,6 +102,16 @@ void SettingsWindow::onHighlightColor()
     }
 }
 
+void SettingsWindow::onCmdNotepad()
+{
+    setWindowText(GetDlgItem(dialog_, IDC_CMD), "notepad.exe \"!FILENAME!\"");
+}
+
+void SettingsWindow::onCmdAssoc()
+{
+    setWindowText(GetDlgItem(dialog_, IDC_CMD), "cmd.exe /c start \"Frisk\" \"!FILENAME!\"");
+}
+
 static INT_PTR CALLBACK SettingsProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
@@ -116,6 +126,8 @@ static INT_PTR CALLBACK SettingsProc(HWND hDlg, UINT message, WPARAM wParam, LPA
                 processCommand(IDC_COLOR_TEXT, onTextColor);
                 processCommand(IDC_COLOR_BG, onBackgroundColor);
                 processCommand(IDC_COLOR_HIGHLIGHT, onHighlightColor);
+                processCommand(IDC_CMD_NOTEPAD, onCmdNotepad);
+                processCommand(IDC_CMD_ASSOC, onCmdAssoc);
             };
     }
     return (INT_PTR)FALSE;

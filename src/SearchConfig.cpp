@@ -8,6 +8,7 @@
 #include "SearchConfig.h"
 
 #include <windows.h>
+#include <shlobj.h>
 #include <cJSON.h>
 
 // ------------------------------------------------------------------------------------------------
@@ -45,9 +46,8 @@ bool readEntireFile(const std::string &filename, std::string &contents)
         return false;
     }
 
-    std::vector<char> temp;
-    temp.resize(size);
-    size_t bytesRead = fread(&temp[0], sizeof(char), size, f);
+    contents.resize(size);
+    size_t bytesRead = fread(&contents[0], sizeof(char), size, f);
     if(bytesRead != size)
     {
         fclose(f);
@@ -55,7 +55,6 @@ bool readEntireFile(const std::string &filename, std::string &contents)
     }
 
     fclose(f);
-    contents.assign(temp.begin(), temp.end());
     return true;
 }
 
@@ -170,6 +169,11 @@ SearchConfig::SearchConfig()
     backgroundColor_ = RGB(224, 224, 224);
 	highlightColor_ = RGB(255, 0, 0);
     cmdTemplate_ = "notepad.exe \"!FILENAME!\"";
+
+    TCHAR tempPath[MAX_PATH];
+    if(SUCCEEDED(SHGetFolderPath(NULL, CSIDL_DESKTOPDIRECTORY|CSIDL_FLAG_CREATE, NULL, 0, tempPath)))
+        paths_.push_back(tempPath);
+    filespecs_.push_back("*.txt;*.ini");
 }
 
 SearchConfig::~SearchConfig()

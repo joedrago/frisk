@@ -46,21 +46,23 @@ FONT 8, "MS Shell Dlg", 0, 0, 1
 
 
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
-IDD_SETTINGS DIALOGEX 0, 0, 203, 127
+IDD_SETTINGS DIALOGEX 0, 0, 203, 146
 STYLE DS_MODALFRAME | DS_SHELLFONT | WS_CAPTION | WS_POPUP | WS_SYSMENU
 CAPTION "Settings"
 FONT 8, "MS Shell Dlg", 400, 0, 1
 {
     EDITTEXT        IDC_CMD, 8, 16, 188, 14, ES_AUTOHSCROLL
-    PUSHBUTTON      "Text...", IDC_COLOR_TEXT, 8, 52, 60, 14
-    PUSHBUTTON      "Background...", IDC_COLOR_BG, 72, 52, 60, 14
-    PUSHBUTTON      "Highlight...", IDC_COLOR_HIGHLIGHT, 136, 52, 60, 14
-    EDITTEXT        IDC_TEXTSIZE, 100, 80, 40, 14, ES_AUTOHSCROLL | ES_NUMBER
-    DEFPUSHBUTTON   "OK", IDOK, 72, 108, 60, 14
-    PUSHBUTTON      "Cancel", IDCANCEL, 136, 108, 60, 14
-    GROUPBOX        "Command Template", IDC_STATIC, 4, 4, 196, 32
-    GROUPBOX        "Colors", IDC_STATIC, 4, 40, 196, 32
-    LTEXT           "Text size:", IDC_STATIC, 64, 84, 31, 8, SS_LEFT
+    PUSHBUTTON      "Text...", IDC_COLOR_TEXT, 8, 72, 60, 14
+    PUSHBUTTON      "Background...", IDC_COLOR_BG, 72, 72, 60, 14
+    PUSHBUTTON      "Highlight...", IDC_COLOR_HIGHLIGHT, 136, 72, 60, 14
+    EDITTEXT        IDC_TEXTSIZE, 100, 100, 40, 14, ES_AUTOHSCROLL | ES_NUMBER
+    DEFPUSHBUTTON   "OK", IDOK, 72, 128, 60, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 136, 128, 60, 14
+    GROUPBOX        "Open With: (when double clicking on output line)", IDC_STATIC, 4, 4, 196, 52
+    GROUPBOX        "Colors", IDC_STATIC, 4, 60, 196, 32
+    LTEXT           "Text size:", IDC_STATIC, 64, 104, 31, 8, SS_LEFT
+    PUSHBUTTON      "Notepad", IDC_CMD_NOTEPAD, 8, 36, 60, 14
+    PUSHBUTTON      "Open With Associated Program", IDC_CMD_ASSOC, 72, 36, 124, 14
 }
 
 
