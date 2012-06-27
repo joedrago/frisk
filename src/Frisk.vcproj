@@ -63,6 +63,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="..\external\pcre-8.30\build\Debug\pcred.lib"
+				OutputFile="$(OutDir)\frisk.exe"
 				LinkIncremental="2"
 				GenerateManifest="false"
 				GenerateDebugInformation="true"
@@ -139,6 +140,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="..\external\pcre-8.30\build\MinSizeRel\pcre.lib"
+				OutputFile="$(OutDir)\frisk.exe"
 				LinkIncremental="1"
 				GenerateManifest="false"
 				GenerateDebugInformation="true"

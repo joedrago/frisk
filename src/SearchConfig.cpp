@@ -24,7 +24,7 @@ static std::string calcConfigFilename()
         {
             *lastBackslash = 0;
             filename = buffer;
-            filename += "\\config.json";
+            filename += "\\frisk.conf";
         }
     }
     return filename;
