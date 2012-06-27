@@ -30,6 +30,7 @@ public:
     void onCancel();
     void onTextColor();
     void onBackgroundColor();
+    void onHighlightColor();
 
 protected:
     HINSTANCE instance_;
@@ -38,6 +39,7 @@ protected:
     SearchConfig *config_;
     int textColor_;
     int backgroundColor_;
+	int highlightColor_;
 };
 
 #endif

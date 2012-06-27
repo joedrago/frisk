@@ -30,6 +30,7 @@ public:
     void controlsToConfig();
     void windowToConfig();
     void updateState();
+	std::string rtfHighlight(const char *rawLine, HighlightList &highlights, int count);
 
     INT_PTR onInitDialog(HWND hDlg, WPARAM wParam, LPARAM lParam);
     INT_PTR onPoke(WPARAM wParam, LPARAM lParam);

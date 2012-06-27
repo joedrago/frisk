@@ -50,8 +50,10 @@ public:
     int windowH_;
     int windowMaximized_;
     int flags_;
+	int textSize_;
     int textColor_;
     int backgroundColor_;
+	int highlightColor_;
 };
 
 #endif

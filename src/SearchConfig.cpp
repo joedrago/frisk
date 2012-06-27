@@ -166,7 +166,9 @@ SearchConfig::SearchConfig()
     windowMaximized_ = 0;
     flags_ = SF_RECURSIVE;
     textColor_ = RGB(0, 0, 0);
+	textSize_ = 8;
     backgroundColor_ = RGB(224, 224, 224);
+	highlightColor_ = RGB(255, 0, 0);
     cmdTemplate_ = "notepad.exe \"!FILENAME!\"";
 }
 
@@ -197,7 +199,9 @@ void SearchConfig::load()
     jsonGetInt(json, "windowMaximized", windowMaximized_);
     jsonGetInt(json, "flags", flags_);
     jsonGetInt(json, "textColor", textColor_);
+    jsonGetInt(json, "textSize", textSize_);
     jsonGetInt(json, "backgroundColor", backgroundColor_);
+    jsonGetInt(json, "highlightColor", highlightColor_);
     jsonGetString(json, "cmdTemplate", cmdTemplate_);
     jsonGetStringList(json, "matches", matches_);
     jsonGetStringList(json, "paths", paths_);
@@ -221,7 +225,9 @@ void SearchConfig::save()
     jsonSetInt(json, "windowMaximized", windowMaximized_);
     jsonSetInt(json, "flags", flags_);
     jsonSetInt(json, "textColor", textColor_);
+    jsonSetInt(json, "textSize", textSize_);
     jsonSetInt(json, "backgroundColor", backgroundColor_);
+    jsonSetInt(json, "highlightColor", highlightColor_);
     jsonSetString(json, "cmdTemplate", cmdTemplate_);
     jsonSetStringList(json, "matches", matches_);
     jsonSetStringList(json, "paths", paths_);

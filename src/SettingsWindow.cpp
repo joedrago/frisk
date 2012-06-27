@@ -21,6 +21,7 @@ SettingsWindow::SettingsWindow(HINSTANCE instance, HWND parent, SearchConfig *co
 
     textColor_ = config_->textColor_;
     backgroundColor_ = config_->backgroundColor_;
+	highlightColor_ = config_->highlightColor_;
 }
 
 SettingsWindow::~SettingsWindow()
@@ -32,6 +33,10 @@ INT_PTR SettingsWindow::onInitDialog(HWND hDlg, WPARAM wParam, LPARAM lParam)
 {
     dialog_ = hDlg;
     setWindowText(GetDlgItem(dialog_, IDC_CMD), config_->cmdTemplate_.c_str());
+
+	char textSizeStr[32];
+	sprintf(textSizeStr, "%d", config_->textSize_);
+	setWindowText(GetDlgItem(dialog_, IDC_TEXTSIZE), textSizeStr);
     return TRUE;
 }
 
@@ -39,7 +44,13 @@ void SettingsWindow::onOK()
 {
     config_->textColor_ = textColor_;
     config_->backgroundColor_ = backgroundColor_;
+	config_->highlightColor_ = highlightColor_;
     config_->cmdTemplate_ = getWindowText(GetDlgItem(dialog_, IDC_CMD));
+
+	std::string textSizeStr = getWindowText(GetDlgItem(dialog_, IDC_TEXTSIZE));
+	int textSize = atoi(textSizeStr.c_str());
+	if(textSize > 0)
+		config_->textSize_ = textSize;
 
     EndDialog(dialog_, IDOK);
 }
@@ -77,6 +88,20 @@ void SettingsWindow::onBackgroundColor()
     }
 }
 
+void SettingsWindow::onHighlightColor()
+{
+    COLORREF g_rgbCustom[16] = {0};
+    CHOOSECOLOR cc = {sizeof(CHOOSECOLOR)};
+    cc.Flags = CC_RGBINIT | CC_FULLOPEN | CC_ANYCOLOR;
+    cc.hwndOwner = dialog_;
+    cc.rgbResult = highlightColor_;
+    cc.lpCustColors = g_rgbCustom;
+    if(ChooseColor(&cc))
+    {
+        highlightColor_ = cc.rgbResult;
+    }
+}
+
 static INT_PTR CALLBACK SettingsProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
@@ -90,6 +115,7 @@ static INT_PTR CALLBACK SettingsProc(HWND hDlg, UINT message, WPARAM wParam, LPA
                 processCommand(IDCANCEL, onCancel);
                 processCommand(IDC_COLOR_TEXT, onTextColor);
                 processCommand(IDC_COLOR_BG, onBackgroundColor);
+                processCommand(IDC_COLOR_HIGHLIGHT, onHighlightColor);
             };
     }
     return (INT_PTR)FALSE;

@@ -43,6 +43,7 @@ SearchContext::SearchContext(HWND window)
 , searchID_(0)
 , offset_(0)
 , window_(window)
+, pokeData_(NULL)
 {
     mutex_ = CreateMutex(NULL, FALSE, NULL);
     config_.load();
@@ -66,16 +67,16 @@ void SearchContext::clear()
     list_.clear();
 }
 
-std::string SearchContext::generateDisplay(SearchEntry &entry)
+std::string SearchContext::generateDisplay(SearchEntry &entry, int &textOffset)
 {
-    std::string s;
-    int requiredLen = _snprintf(NULL, 0, "%30s(%d): %s\n", entry.filename_.c_str(), entry.line_, entry.match_.c_str());
-    if(requiredLen > 0)
-    {
-        s.resize(requiredLen+1);
-        _snprintf(&s[0], requiredLen, "%30s(%d): %s\n", entry.filename_.c_str(), entry.line_, entry.match_.c_str());
-        s.resize(requiredLen);
-    }
+	char middle[64];
+	sprintf(middle, "(%d): ", entry.line_);
+
+    std::string s = entry.filename_.c_str();
+	s += middle;
+	textOffset = s.length();
+	s += entry.match_;
+	s += "\n";
     return s;
 }
 
@@ -83,7 +84,8 @@ void SearchContext::append(int id, SearchEntry &entry)
 {
     lock();
 
-    std::string str = generateDisplay(entry);
+	int textOffset = 0;
+    std::string str = generateDisplay(entry, textOffset);
     offset_ += str.length();
 
     entry.offset_ = offset_;
@@ -91,13 +93,20 @@ void SearchContext::append(int id, SearchEntry &entry)
 
     unlock();
 
-    poke(id, str, false);
+    poke(id, str, entry.highlights_, textOffset, false);
 }
 
-void SearchContext::poke(int id, const std::string &str, bool finished)
+void SearchContext::poke(int id, const std::string &str, HighlightList &highlights, int highlightOffset, bool finished)
 {
     if(!str.empty())
-        pokeFlowControl_ += str;
+	{
+		int additionalOffset = pokeData_->text.length() + highlightOffset;
+        pokeData_->text += str;
+		for(HighlightList::iterator it = highlights.begin(); it != highlights.end(); it++)
+		{
+			pokeData_->highlights.push_back(Highlight(it->offset + additionalOffset, it->count));
+		}
+	}
 
     if(window_ != INVALID_HANDLE_VALUE)
     {
@@ -105,8 +114,8 @@ void SearchContext::poke(int id, const std::string &str, bool finished)
         if(finished || (now > (lastPoke_ + (1000 / POKES_PER_SECOND))))
         {
             lastPoke_ = now;
-            PostMessage(window_, WM_SEARCHCONTEXT_POKE, id, (LPARAM)strdup(pokeFlowControl_.c_str()));
-            pokeFlowControl_.clear();
+            PostMessage(window_, WM_SEARCHCONTEXT_POKE, id, (LPARAM)pokeData_);
+            pokeData_ = new PokeData;
         }
     }
 }
@@ -183,7 +192,7 @@ static char *nextToken(char **p, char sep)
     return front;
 }
 
-bool SearchContext::searchFile(int id, const std::string &filename, RegexList &filespecRegexes, pcre *matchRegex, SearchEntry &entry)
+bool SearchContext::searchFile(int id, const std::string &filename, RegexList &filespecRegexes, pcre *matchRegex)
 {
     bool matchesOneFilespec = false;
     for(RegexList::iterator it = filespecRegexes.begin(); it != filespecRegexes.end(); it++)
@@ -212,6 +221,7 @@ bool SearchContext::searchFile(int id, const std::string &filename, RegexList &f
     {
         char *originalLine = line;
         std::string replacedLine;
+		SearchEntry entry;
         int ovector[100];
         do
         {
@@ -249,6 +259,7 @@ bool SearchContext::searchFile(int id, const std::string &filename, RegexList &f
                 if(matches)
                 {
                     replacedLine.append(line, matchPos);
+					entry.highlights_.push_back(Highlight(replacedLine.length(), params_.replace.length()));
                     replacedLine.append(params_.replace);
                     line += matchPos + matchLen;
                 }
@@ -262,11 +273,15 @@ bool SearchContext::searchFile(int id, const std::string &filename, RegexList &f
                 if(matches)
                 {
                     entry.filename_ = filename;
-                    entry.match_ = line;
+                    entry.match_ = originalLine;
                     entry.line_ = lineNumber;
-                    append(id, entry);
+					entry.highlights_.push_back(Highlight(matchPos + (line - originalLine), matchLen));
+					line += matchPos + matchLen;
                 }
-                break; // stop searching this line
+				else
+				{
+					break;
+				}
             }
         }
         while(*line);
@@ -285,6 +300,12 @@ bool SearchContext::searchFile(int id, const std::string &filename, RegexList &f
             replacedLine += "\n";
             updatedContents += replacedLine;
         }
+		else
+		{
+			if(!entry.filename_.empty())
+				append(id, entry);
+		}
+		lineNumber++;
     }
     if(params_.flags & SF_REPLACE)
     {
@@ -299,7 +320,7 @@ bool SearchContext::searchFile(int id, const std::string &filename, RegexList &f
                 std::string err = "WARNING: Couldn't write to file: ";
                 err += filename;
                 err += "\n";
-                poke(id, err.c_str(), false);
+                poke(id, err.c_str(), HighlightList(), 0, false);
             }
         }
         return false;
@@ -347,7 +368,6 @@ void SearchContext::searchProc()
     int id = searchID_;
     HANDLE findHandle = INVALID_HANDLE_VALUE;
     StringList paths;
-    SearchEntry entry;
     paths = params_.paths;
     RegexList filespecRegexes;
     pcre *matchRegex = NULL;
@@ -358,6 +378,9 @@ void SearchContext::searchProc()
 
     bool filespecUsesRegexes = ((params_.flags & SF_FILESPEC_REGEXES) != 0);
     bool matchUsesRegexes    = ((params_.flags & SF_MATCH_REGEXES) != 0);
+
+	delete pokeData_;
+	pokeData_ = new PokeData;
 
     if(matchUsesRegexes)
     {
@@ -434,7 +457,7 @@ void SearchContext::searchProc()
             }
             else
             {
-                if(searchFile(id, filename, filespecRegexes, matchRegex, entry))
+                if(searchFile(id, filename, filespecRegexes, matchRegex))
                     filesSearched++;
                 else
                     filesSkipped++;
@@ -457,13 +480,14 @@ cleanup:
             sprintf(buffer, "\n%d directories scanned, %d files updated, %d files skipped", directoriesSearched, filesSearched, filesSkipped);
         else
             sprintf(buffer, "\n%d directories scanned, %d files searched, %d files skipped", directoriesSearched, filesSearched, filesSkipped);
-        poke(id, buffer, true);
+        poke(id, buffer, HighlightList(), 0, true);
     }
     if(findHandle != INVALID_HANDLE_VALUE)
     {
         FindClose(findHandle);
     }
-    pokeFlowControl_ = "";
+    delete pokeData_;
+	pokeData_ = NULL;
     PostMessage(window_, WM_SEARCHCONTEXT_STATE, 0, 0);
 }
 

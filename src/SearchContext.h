@@ -31,6 +31,16 @@ protected:
     HANDLE mutex_;
 };
 
+struct Highlight
+{
+	Highlight(int o, int c) { offset = o; count = c; }
+
+	int offset;
+	int count;
+};
+
+typedef std::vector<Highlight> HighlightList;
+
 class SearchEntry
 {
 public:
@@ -39,6 +49,7 @@ public:
 
     std::string filename_;
     std::string match_;
+	HighlightList highlights_;
     int line_;
     int offset_;
 };
@@ -55,6 +66,12 @@ struct SearchParams
     int flags;
 };
 
+struct PokeData // pika, pika!
+{
+	std::string text;
+	HighlightList highlights;
+};
+
 class SearchContext
 {
 public:
@@ -66,9 +83,9 @@ public:
     void append(int id, SearchEntry &entry);         // takes ownership
     void search(const SearchParams &params); // copies
     void stop();
-    void poke(int id, const std::string &str, bool finished);
+    void poke(int id, const std::string &str, HighlightList &highlights, int highlightOffset, bool finished);
 
-    std::string generateDisplay(SearchEntry &entry);
+    std::string generateDisplay(SearchEntry &entry, int &textOffset);
 
     void lock();
     SearchList &list();
@@ -81,7 +98,7 @@ public:
 
     void searchProc();
 protected:
-    bool searchFile(int id, const std::string &filename, RegexList &filespecRegexes, pcre *matchRegex, SearchEntry &entry);
+    bool searchFile(int id, const std::string &filename, RegexList &filespecRegexes, pcre *matchRegex);
 
     HWND window_;
 
@@ -91,7 +108,7 @@ protected:
     int searchID_;
     int offset_;
     unsigned int lastPoke_;
-    std::string pokeFlowControl_;
+	PokeData *pokeData_;
     SearchList list_;
     SearchParams params_;
     SearchConfig config_;

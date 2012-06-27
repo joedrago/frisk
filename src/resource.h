@@ -23,4 +23,5 @@
 #define IDC_COLOR_TEXT                          1018
 #define IDC_COLOR_BG                            1019
 #define IDC_CMD                                 1020
-#define IDC_OHAI                                1021
+#define IDC_COLOR_HIGHLIGHT                     1022
+#define IDC_TEXTSIZE                            1024

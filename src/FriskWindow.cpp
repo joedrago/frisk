@@ -155,15 +155,7 @@ void FriskWindow::outputUpdatePos()
 
 void FriskWindow::outputUpdateColors()
 {
-    CHARFORMAT format = {0};
-    format.cbSize = sizeof(CHARFORMAT);
-    format.dwMask = CFM_FACE | CFM_SIZE | CFM_COLOR;
-    format.yHeight = 160;
-    format.crTextColor = config_->textColor_;
-    strcpy(format.szFaceName, "Courier New");
     SendMessage(outputCtrl_, EM_SETBKGNDCOLOR, 0, (LPARAM)config_->backgroundColor_);
-    SendMessage(outputCtrl_, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&format);
-    SendMessage(outputCtrl_, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&format);
     InvalidateRect(outputCtrl_, NULL, TRUE);
 }
 
@@ -284,10 +276,65 @@ INT_PTR FriskWindow::onInitDialog(HWND hDlg, WPARAM wParam, LPARAM lParam)
     return TRUE;
 }
 
+static void splitRtfHighlights(const char *rawLine, HighlightList &highlights, StringList &l)
+{
+	const char* c = rawLine;
+	for(HighlightList::iterator it = highlights.begin(); it != highlights.end(); it++)
+	{
+		Highlight &highlight = *it;
+		std::string pre(c, rawLine + it->offset);
+		l.push_back(pre);
+		std::string p(rawLine + it->offset, it->count);
+		l.push_back(p);
+		c = rawLine + it->offset + it->count;
+	}
+	if(*c)
+		l.push_back(std::string(c));
+}
+
+std::string FriskWindow::rtfHighlight(const char *rawLine, HighlightList &highlights, int count)
+{
+	StringList pieces;
+	splitRtfHighlights(rawLine, highlights, pieces);
+
+	char header[1024];
+	sprintf(header, "{\\rtf1{\\fonttbl{\\f0\\fnil\\fcharset0 Courier New;}}{\\colortbl ;\\red%d\\green%d\\blue%d;\\red%d\\green%d\\blue%d;}\\fs%d\\cf1 ",
+		(int)GetRValue(config_->textColor_),
+		(int)GetGValue(config_->textColor_),
+		(int)GetBValue(config_->textColor_),
+		(int)GetRValue(config_->highlightColor_),
+		(int)GetGValue(config_->highlightColor_),
+		(int)GetBValue(config_->highlightColor_),
+		config_->textSize_ * 2
+		);
+
+	std::string rtf = header;
+	const char * colorTexts[2] = 
+	{
+		"\\cf1 ",
+		"\\cf2 ",
+	};
+	int currentColor = 0;
+	for(StringList::iterator it = pieces.begin(); it != pieces.end(); it++)
+	{
+		replaceAll(*it, "\\", "\\\\");
+		replaceAll(*it, "{", "\\{");
+		replaceAll(*it, "}", "\\}");
+		replaceAll(*it, "\n", "\\line ");
+		rtf += colorTexts[currentColor];
+		currentColor ^= 1;
+		rtf += *it;
+	}
+	rtf += "}";
+	return rtf;
+}
+
 INT_PTR FriskWindow::onPoke(WPARAM wParam, LPARAM lParam)
 {
     if(wParam != context_->searchID())
         return FALSE;
+
+	PokeData *pokeData = (PokeData *)lParam;
 
     // Disable redrawing briefly
     SendMessage(outputCtrl_, WM_SETREDRAW, FALSE, 0);
@@ -311,9 +358,9 @@ INT_PTR FriskWindow::onPoke(WPARAM wParam, LPARAM lParam)
     SendMessage(outputCtrl_, EM_EXSETSEL, 0, (LPARAM)&charRange);
 
     // Append the incoming text
-    char *text = (char *)lParam;
-    SendMessage(outputCtrl_, EM_REPLACESEL, FALSE, (LPARAM)text);
-    free(text);
+	std::string rtfText = rtfHighlight(pokeData->text.c_str(), pokeData->highlights, 0);
+    SendMessage(outputCtrl_, EM_REPLACESEL, FALSE, (LPARAM)rtfText.c_str());
+    delete pokeData;
 
     // Move the caret/selection back to where it was, and scroll to the previous view
     SendMessage(outputCtrl_, EM_EXSETSEL, 0, (LPARAM)&prevRange);
