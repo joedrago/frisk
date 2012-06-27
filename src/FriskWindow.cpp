@@ -405,7 +405,7 @@ void FriskWindow::search(int extraFlags)
     || !hasWindowText(pathCtrl_)
     || !hasWindowText(filespecCtrl_))
     {
-        MessageBox(dialog_, "Please fill out Path, Filespec, and Match.", "Not so fast!", MB_OK);
+        MessageBox(dialog_, "Please fill out What, Where, and Which.", "Not so fast!", MB_OK);
         return;
     }
 
