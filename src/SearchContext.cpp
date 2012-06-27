@@ -376,6 +376,8 @@ void SearchContext::searchProc()
     int filesSearched = 0;
     int filesSkipped = 0;
 
+    unsigned int startTick = GetTickCount();
+
     bool filespecUsesRegexes = ((params_.flags & SF_FILESPEC_REGEXES) != 0);
     bool matchUsesRegexes    = ((params_.flags & SF_MATCH_REGEXES) != 0);
 
@@ -475,11 +477,13 @@ cleanup:
     filespecRegexes.clear();
     if(!stop_)
     {
+        unsigned int endTick = GetTickCount();
         char buffer[256];
+        float sec = (endTick - startTick) / 1000.0f;
         if(params_.flags & SF_REPLACE)
-            sprintf(buffer, "\n%d directories scanned, %d files updated, %d files skipped", directoriesSearched, filesSearched, filesSkipped);
+            sprintf(buffer, "\n%d directories scanned, %d files updated, %d files skipped (%3.3f sec)", directoriesSearched, filesSearched, filesSkipped, sec);
         else
-            sprintf(buffer, "\n%d directories scanned, %d files searched, %d files skipped", directoriesSearched, filesSearched, filesSkipped);
+            sprintf(buffer, "\n%d directories scanned, %d files searched, %d files skipped (%3.3f sec)", directoriesSearched, filesSearched, filesSkipped, sec);
         poke(id, buffer, HighlightList(), 0, true);
     }
     if(findHandle != INVALID_HANDLE_VALUE)
