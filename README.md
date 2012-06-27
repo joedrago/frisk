@@ -28,6 +28,8 @@ Also, this is the best command template ever:
 
     gvim.exe --remote-silent +!LINE! +zz "!FILENAME!"
     
+(The command template represents the command that is run if a line in the output is double clicked.)
+    
 Build Requirements:
 -------------------
 
