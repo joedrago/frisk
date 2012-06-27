@@ -6,6 +6,7 @@
 #define IDI_FRISK                               107
 #define IDI_SMALL                               108
 #define IDD_SETTINGS                            129
+#define IDC_BROWSE                              1001
 #define IDC_MATCH                               1003
 #define IDC_PATH                                1004
 #define IDC_FILESPEC                            1005

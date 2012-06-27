@@ -9,6 +9,8 @@
 #include "SettingsWindow.h"
 #include "resource.h"
 
+#include <Shlobj.h>
+
 static FriskWindow *sWindow = NULL;
 
 // ------------------------------------------------------------------------------------------------
@@ -494,6 +496,31 @@ void FriskWindow::onSettings()
     }
 }
 
+void FriskWindow::onBrowse()
+{
+    BROWSEINFO bi = { 0 };
+    bi.lpszTitle = "Pick a Directory";
+    bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_EDITBOX | BIF_NEWDIALOGSTYLE | BIF_NONEWFOLDERBUTTON;
+    LPITEMIDLIST pidl = SHBrowseForFolder ( &bi );
+    if ( pidl != 0 )
+    {
+        // get the name of the folder
+        char path[MAX_PATH];
+        if ( SHGetPathFromIDList ( pidl, path ) )
+        {
+            setWindowText(pathCtrl_, std::string(path));
+        }
+
+        // free memory used
+        IMalloc * imalloc = 0;
+        if ( SUCCEEDED( SHGetMalloc ( &imalloc )) )
+        {
+            imalloc->Free ( pidl );
+            imalloc->Release ( );
+        }
+    }
+}
+
 void FriskWindow::onDoubleClickOutput()
 {
     CHARRANGE charRange;
@@ -555,6 +582,7 @@ static INT_PTR CALLBACK FriskProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM
                 processCommand(IDC_SEARCH, onSearch);
                 processCommand(IDC_DOREPLACE, onReplace);
                 processCommand(IDC_SETTINGS, onSettings);
+                processCommand(IDC_BROWSE, onBrowse);
             };
     }
     return (INT_PTR)FALSE;

@@ -47,6 +47,7 @@ public:
     void onReplace();
     void onDoubleClickOutput();
     void onSettings();
+    void onBrowse();
 protected:
     HINSTANCE instance_;
     HFONT font_;
