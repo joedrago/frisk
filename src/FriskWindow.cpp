@@ -1,4 +1,5 @@
 #include "FriskWindow.h"
+#include "SettingsWindow.h"
 #include "resource.h"
 
 static FriskWindow *sWindow = NULL;
@@ -12,6 +13,16 @@ static bool hasWindowText(HWND ctrl)
     return (len > 0);
 }
 
+static bool ctrlIsChecked(HWND ctrl)
+{
+    return (SendMessage(ctrl, BM_GETCHECK, 0, 0) == BST_CHECKED);
+}
+
+static void checkCtrl(HWND ctrl, bool checked)
+{
+    PostMessage(ctrl, BM_SETCHECK, checked ? BST_CHECKED : BST_UNCHECKED, 0);
+}
+
 static std::string getWindowText(HWND ctrl)
 {
     std::string str;
@@ -23,6 +34,11 @@ static std::string getWindowText(HWND ctrl)
         str.resize(len);
     }
     return str;
+}
+
+static void setWindowText(HWND ctrl, const std::string &s)
+{
+    SetWindowText(ctrl, s.c_str());
 }
 
 static void comboClear(HWND ctrl)
@@ -84,6 +100,8 @@ FriskWindow::FriskWindow(HINSTANCE instance)
 , filespecCtrl_((HWND)INVALID_HANDLE_VALUE)
 , matchCtrl_((HWND)INVALID_HANDLE_VALUE)
 , context_(NULL)
+, running_(false)
+, closing_(false)
 {
     sWindow = this;
 }
@@ -121,11 +139,31 @@ void FriskWindow::outputUpdatePos()
     MoveWindow(outputCtrl_, 0, outputPos.y, clientRect.right + 2, clientRect.bottom - outputPos.y + 2, TRUE);
 }
 
+void FriskWindow::outputUpdateColors()
+{
+    CHARFORMAT format = {0};
+    format.cbSize = sizeof(CHARFORMAT);
+    format.dwMask = CFM_FACE | CFM_SIZE | CFM_COLOR;
+    format.yHeight = 160;
+    format.crTextColor = config_->textColor_;
+    strcpy(format.szFaceName, "Courier New");
+    SendMessage(outputCtrl_, EM_SETBKGNDCOLOR, 0, (LPARAM)config_->backgroundColor_);
+    SendMessage(outputCtrl_, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&format);
+    SendMessage(outputCtrl_, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&format);
+    InvalidateRect(outputCtrl_, NULL, TRUE);
+}
+
 void FriskWindow::configToControls()
 {
     comboSet(pathCtrl_, config_->paths_);
     comboSet(matchCtrl_, config_->matches_);
     comboSet(filespecCtrl_, config_->filespecs_);
+
+    checkCtrl(GetDlgItem(dialog_, IDC_RECURSIVE),      0 != (config_->flags_ & SF_RECURSIVE));
+    checkCtrl(GetDlgItem(dialog_, IDC_FILESPEC_REGEX), 0 != (config_->flags_ & SF_FILESPEC_REGEXES));
+    checkCtrl(GetDlgItem(dialog_, IDC_FILESPEC_CASE),  0 != (config_->flags_ & SF_FILESPEC_CASE_SENSITIVE));
+    checkCtrl(GetDlgItem(dialog_, IDC_MATCH_REGEXES),  0 != (config_->flags_ & SF_MATCH_REGEXES));
+    checkCtrl(GetDlgItem(dialog_, IDC_MATCH_CASE),     0 != (config_->flags_ & SF_MATCH_CASE_SENSITIVE));
 }
 
 void FriskWindow::controlsToConfig()
@@ -133,6 +171,18 @@ void FriskWindow::controlsToConfig()
     comboLRU(pathCtrl_, config_->paths_, 10);
     comboLRU(matchCtrl_, config_->matches_, 10);
     comboLRU(filespecCtrl_, config_->filespecs_, 10);
+
+    config_->flags_ = 0;
+    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_RECURSIVE)))
+        config_->flags_ |= SF_RECURSIVE;
+    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_FILESPEC_REGEX)))
+        config_->flags_ |= SF_FILESPEC_REGEXES;
+    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_FILESPEC_CASE)))
+        config_->flags_ |= SF_FILESPEC_CASE_SENSITIVE;
+    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_MATCH_REGEXES)))
+        config_->flags_ |= SF_MATCH_REGEXES;
+    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_MATCH_CASE)))
+        config_->flags_ |= SF_MATCH_CASE_SENSITIVE;
 }
 
 void FriskWindow::windowToConfig()
@@ -143,6 +193,13 @@ void FriskWindow::windowToConfig()
     config_->windowY_ = windowRect.top;
     config_->windowW_ = windowRect.right - windowRect.left;
     config_->windowH_ = windowRect.bottom - windowRect.top;
+}
+
+void FriskWindow::updateState()
+{
+    const char *running = running_ ? "Frisking, please wait..." : "";
+    setWindowText(stateCtrl_, running);
+    InvalidateRect(stateCtrl_, NULL, TRUE);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -156,17 +213,12 @@ INT_PTR FriskWindow::onInitDialog(HWND hDlg, WPARAM wParam, LPARAM lParam)
     pathCtrl_     = GetDlgItem(hDlg, IDC_PATH);
     filespecCtrl_ = GetDlgItem(hDlg, IDC_FILESPEC);
     matchCtrl_    = GetDlgItem(hDlg, IDC_MATCH);
+    stateCtrl_    = GetDlgItem(hDlg, IDC_STATE);
+
+    bool shouldMaximize = (config_->windowMaximized_ != 0);
 
     HDC dc = GetDC(NULL);
-    CHARFORMAT format = {0};
-    format.cbSize = sizeof(CHARFORMAT);
-    format.dwMask = CFM_FACE | CFM_SIZE | CFM_COLOR;
-    format.yHeight = 160;
-    format.crTextColor = RGB(255, 255, 255);
-    strcpy(format.szFaceName, "Courier New");
-    SendMessage(outputCtrl_, EM_SETBKGNDCOLOR, 0, (LPARAM)RGB(0,0,0));
-    SendMessage(outputCtrl_, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&format);
-    SendMessage(outputCtrl_, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&format);
+    outputUpdateColors();
     SendMessage(outputCtrl_, EM_SETEVENTMASK, 0, ENM_MOUSEEVENTS);
     CHARRANGE charRange;
     charRange.cpMin = -1;
@@ -175,6 +227,7 @@ INT_PTR FriskWindow::onInitDialog(HWND hDlg, WPARAM wParam, LPARAM lParam)
     ReleaseDC(NULL, dc);
 
     configToControls();
+    updateState();
 
     RECT windowRect;
     GetWindowRect(dialog_, &windowRect);
@@ -185,6 +238,8 @@ INT_PTR FriskWindow::onInitDialog(HWND hDlg, WPARAM wParam, LPARAM lParam)
     if(config_->windowH_)
         height = config_->windowH_;
     MoveWindow(dialog_, config_->windowX_, config_->windowY_, width, height, FALSE);
+    if(shouldMaximize)
+        ShowWindow(dialog_, SW_MAXIMIZE);
     return TRUE;
 }
 
@@ -226,6 +281,15 @@ INT_PTR FriskWindow::onPoke(WPARAM wParam, LPARAM lParam)
     // Reenable redrawing and invalidate the window's contents
     SendMessage(outputCtrl_, WM_SETREDRAW, TRUE, 0);
     InvalidateRect(outputCtrl_, NULL, TRUE);
+
+    updateState();
+    return TRUE;
+}
+
+INT_PTR FriskWindow::onState(WPARAM wParam, LPARAM lParam)
+{
+    running_ = (wParam != 0);
+    updateState();
     return TRUE;
 }
 
@@ -253,14 +317,31 @@ INT_PTR FriskWindow::onNotify(WPARAM wParam, LPARAM lParam)
 
 INT_PTR FriskWindow::onMove(WPARAM wParam, LPARAM lParam)
 {
-    windowToConfig();
+    if(!closing_)
+        windowToConfig();
     return TRUE;
 }
 
 INT_PTR FriskWindow::onSize(WPARAM wParam, LPARAM lParam)
 {
     outputUpdatePos();
-    windowToConfig();
+    if(wParam == SIZE_MAXIMIZED)
+    {
+        config_->windowMaximized_ = 1;
+        return TRUE;
+    }
+
+    if(!closing_)
+        config_->windowMaximized_ = 0;
+
+    if(wParam == SIZE_MINIMIZED)
+    {
+        // Not interesting
+    }
+    else
+    {
+        windowToConfig();
+    }
     return TRUE;
 }
 
@@ -272,6 +353,8 @@ INT_PTR FriskWindow::onShow(WPARAM wParam, LPARAM lParam)
 
 void FriskWindow::onCancel()
 {
+    closing_ = true;
+    SendMessage(dialog_, WM_SYSCOMMAND, SC_RESTORE, 0);
     EndDialog(dialog_, IDCANCEL);
 }
 
@@ -292,10 +375,22 @@ void FriskWindow::onSearch()
     outputClear();
 
     SearchParams params;
+    params.flags = config_->flags_;
     params.match = config_->matches_[0];
     split(config_->paths_[0], ";", params.paths);
     split(config_->filespecs_[0], ";", params.filespecs);
     context_->search(params);
+
+    updateState();
+}
+
+void FriskWindow::onSettings()
+{
+    SettingsWindow settings(instance_, dialog_, config_);
+    if(settings.show())
+    {
+        outputUpdateColors();
+    }
 }
 
 void FriskWindow::onDoubleClickOutput()
@@ -325,16 +420,13 @@ void FriskWindow::onDoubleClickOutput()
 
 // ------------------------------------------------------------------------------------------------
 
-#define processMessageH(MSG, FUNC) case MSG: return sWindow->FUNC(hDlg, wParam, lParam)
-#define processMessage(MSG, FUNC)  case MSG: return sWindow->FUNC(wParam, lParam)
-#define processCommand(CMD, FUNC)  case CMD: sWindow->FUNC(); return TRUE
-
 static INT_PTR CALLBACK FriskProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message)
 	{
         processMessageH(WM_INITDIALOG, onInitDialog);
         processMessage(WM_SEARCHCONTEXT_POKE, onPoke);
+        processMessage(WM_SEARCHCONTEXT_STATE, onState);
         processMessage(WM_NOTIFY, onNotify);
         processMessage(WM_MOVE, onMove);
         processMessage(WM_SIZE, onSize);
@@ -345,6 +437,7 @@ static INT_PTR CALLBACK FriskProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM
             {
                 processCommand(IDCANCEL, onCancel);
                 processCommand(IDC_SEARCH, onSearch);
+                processCommand(IDC_SETTINGS, onSettings);
             };
 	}
 	return (INT_PTR)FALSE;

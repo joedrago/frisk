@@ -23,7 +23,7 @@ static std::string calcConfigFilename()
     return filename;
 }
 
-static bool readEntireFile(const std::string &filename, std::string &contents)
+bool readEntireFile(const std::string &filename, std::string &contents)
 {
     FILE *f = fopen(filename.c_str(), "rb");
     if(!f)
@@ -147,6 +147,10 @@ SearchConfig::SearchConfig()
     windowY_ = 0;
     windowW_ = 0;
     windowH_ = 0;
+    windowMaximized_ = 0;
+    flags_ = SF_RECURSIVE;
+    textColor_ = RGB(255, 255, 255);
+    backgroundColor_ = RGB(0, 0, 0);
 }
 
 SearchConfig::~SearchConfig()
@@ -173,6 +177,10 @@ void SearchConfig::load()
     jsonGetInt(json, "windowY", windowY_);
     jsonGetInt(json, "windowW", windowW_);
     jsonGetInt(json, "windowH", windowH_);
+    jsonGetInt(json, "windowMaximized", windowMaximized_);
+    jsonGetInt(json, "flags", flags_);
+    jsonGetInt(json, "textColor", textColor_);
+    jsonGetInt(json, "backgroundColor", backgroundColor_);
     jsonGetStringList(json, "matches", matches_);
     jsonGetStringList(json, "paths", paths_);
     jsonGetStringList(json, "filespecs", filespecs_);
@@ -191,6 +199,10 @@ void SearchConfig::save()
     jsonSetInt(json, "windowY", windowY_);
     jsonSetInt(json, "windowW", windowW_);
     jsonSetInt(json, "windowH", windowH_);
+    jsonSetInt(json, "windowMaximized", windowMaximized_);
+    jsonSetInt(json, "flags", flags_);
+    jsonSetInt(json, "textColor", textColor_);
+    jsonSetInt(json, "backgroundColor", backgroundColor_);
     jsonSetStringList(json, "matches", matches_);
     jsonSetStringList(json, "paths", paths_);
     jsonSetStringList(json, "filespecs", filespecs_);

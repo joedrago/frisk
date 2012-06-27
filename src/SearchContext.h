@@ -2,10 +2,13 @@
 #define SEARCHCONTEXT_H
 
 #include <windows.h>
+#include <config.h>
+#include <pcre.h>
 
 #include "SearchConfig.h"
 
-#define WM_SEARCHCONTEXT_POKE (WM_USER+1)
+#define WM_SEARCHCONTEXT_STATE (WM_USER+1)
+#define WM_SEARCHCONTEXT_POKE (WM_USER+2)
 
 class ScopedMutex
 {
@@ -30,6 +33,7 @@ public:
 };
 
 typedef std::vector<SearchEntry> SearchList;
+typedef std::vector<pcre *> RegexList;
 
 struct SearchParams
 {
@@ -52,6 +56,8 @@ public:
     void stop();
     void poke(int id, const std::string &str, bool finished);
 
+    std::string generateDisplay(SearchEntry &entry);
+
     void lock();
     SearchList &list();
     void unlock();
@@ -63,7 +69,7 @@ public:
 
     void searchProc();
 protected:
-    void searchFile(int id, const std::string &filename, SearchEntry &entry);
+    void searchFile(int id, const std::string &filename, RegexList &filespecRegexes, pcre *matchRegex, SearchEntry &entry);
 
     HWND window_;
 

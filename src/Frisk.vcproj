@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\external\cJSON"
+				AdditionalIncludeDirectories="..\external\cJSON;&quot;..\external\pcre-8.30&quot;;&quot;..\external\pcre-8.30\build&quot;"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -62,6 +62,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="..\external\pcre-8.30\build\Debug\pcred.lib"
 				LinkIncremental="2"
 				GenerateManifest="false"
 				GenerateDebugInformation="true"
@@ -194,6 +195,10 @@
 				RelativePath=".\SearchContext.cpp"
 				>
 			</File>
+			<File
+				RelativePath=".\SettingsWindow.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -218,6 +223,10 @@
 			</File>
 			<File
 				RelativePath=".\SearchContext.h"
+				>
+			</File>
+			<File
+				RelativePath=".\SettingsWindow.h"
 				>
 			</File>
 		</Filter>

@@ -1,6 +1,9 @@
 #include "SearchContext.h"
 
-#define POKES_PER_SECOND (2)
+#include <algorithm>
+#include <stdio.h>
+
+#define POKES_PER_SECOND (5)
 
 // ------------------------------------------------------------------------------------------------
 
@@ -53,18 +56,27 @@ void SearchContext::clear()
 {
     ScopedMutex lock(mutex_);
 
-    //for(SearchList::iterator it = list_.begin(); it != list_.end(); it++)
-    //{
-    //    delete *it;
-    //}
     list_.clear();
+}
+
+std::string SearchContext::generateDisplay(SearchEntry &entry)
+{
+    std::string s;
+    int requiredLen = _snprintf(NULL, 0, "%30s(%d): %s\n", entry.filename_.c_str(), entry.line_, entry.match_.c_str());
+    if(requiredLen > 0)
+    {
+        s.resize(requiredLen+1);
+        _snprintf(&s[0], requiredLen, "%30s(%d): %s\n", entry.filename_.c_str(), entry.line_, entry.match_.c_str());
+        s.resize(requiredLen);
+    }
+    return s;
 }
 
 void SearchContext::append(int id, SearchEntry &entry)
 {
     lock();
 
-    std::string str = entry.filename_ + "\n";
+    std::string str = generateDisplay(entry);
     offset_ += str.length();
 
     entry.offset_ = offset_;
@@ -73,10 +85,6 @@ void SearchContext::append(int id, SearchEntry &entry)
     unlock();
 
     poke(id, str, false);
-
-    //OutputDebugString("someone appended: ");
-    //OutputDebugString(entry.filename_.c_str());
-    //OutputDebugString("\n");
 }
 
 void SearchContext::poke(int id, const std::string &str, bool finished)
@@ -98,30 +106,100 @@ void SearchContext::poke(int id, const std::string &str, bool finished)
 
 // ------------------------------------------------------------------------------------------------
 
-static bool filenameMatchesFilespecs(const std::string &filename, const StringList &filespecs)
+static void replaceAll(std::string &s, const char *f, const char *r)
 {
-    for(StringList::const_iterator it = filespecs.begin(); it != filespecs.end(); it++)
+    int flen = strlen(f);
+    int rlen = strlen(r);
+    int pos = 0 - rlen;
+    while((pos = s.find(f, pos + rlen)) != -1)
     {
-        if(strstr(filename.c_str(), (*it).c_str()))
-        {
-            return true;
-        }
+        s.replace(pos, flen, r);
     }
-    return false;
+}
+
+void convertWildcard(std::string &regex)
+{
+    // Pretty terrible and crazy stuff.
+    replaceAll(regex, "[", "\\[");
+    replaceAll(regex, "]", "\\]");
+    replaceAll(regex, "\\", "\\\\");
+    replaceAll(regex, ".", "\\.");
+    replaceAll(regex, "*", ".*");
+    replaceAll(regex, "?", ".?");
+    regex.insert(0, "^");
+    regex.append("$");
 }
 
 #define stopCheck() { if(stop_) goto cleanup; }
 
-void SearchContext::searchFile(int id, const std::string &filename, SearchEntry &entry)
+static char * strstri(char * haystack, const char * needle)
 {
-    if(!filenameMatchesFilespecs(filename, params_.filespecs))
+    char *front = haystack;
+    for(; *front; front++)
+    {
+        const char *a = front;
+        const char *b = needle;
+
+        while(*a && *b)
+        {
+            if(tolower(*a) != tolower(*b))
+                break;
+            a++;
+            b++;
+        }
+        if(!*b)
+            return front;
+    }
+    return NULL;
+}
+
+void SearchContext::searchFile(int id, const std::string &filename, RegexList &filespecRegexes, pcre *matchRegex, SearchEntry &entry)
+{
+    bool matchesOneFilespec = false;
+    for(RegexList::iterator it = filespecRegexes.begin(); it != filespecRegexes.end(); it++)
+    {
+        pcre *regex = *it;
+        if(pcre_exec(regex, NULL, filename.c_str(), filename.length(), 0, 0, NULL, 0) >= 0)
+        {
+            matchesOneFilespec = true;
+            break;
+        }
+    }
+    if(!matchesOneFilespec)
         return;
 
-    entry.filename_ = filename;
-    entry.match_ = "horee crap this is some sweet matching 456 text";
-    static int a = 0;
-    entry.line_ = a++;
-    append(id, entry);
+    std::string contents;
+    if(!readEntireFile(filename, contents))
+        return;
+
+    int lineNumber = 1;
+    const char *seps = "\n";
+    for(char *line = strtok(&contents[0], seps); line != NULL; lineNumber++, line = strtok(NULL, seps))
+    {
+        bool matches = false;
+        if(matchRegex)
+        {
+            if(pcre_exec(matchRegex, NULL, line, strlen(line), 0, 0, NULL, 0) >= 0)
+            {
+                matches = true;
+            }
+        }
+        else
+        {
+            if(params_.flags & SF_MATCH_CASE_SENSITIVE)
+                matches = ( strstr(line, params_.match.c_str()) != NULL );
+            else
+                matches = ( strstri(line, params_.match.c_str()) != NULL );
+        }
+
+        if(matches)
+        {
+            entry.filename_ = filename;
+            entry.match_ = line;
+            entry.line_ = lineNumber;
+            append(id, entry);
+        }
+    }
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -166,6 +244,50 @@ void SearchContext::searchProc()
     StringList paths;
     SearchEntry entry;
     paths = params_.paths;
+    RegexList filespecRegexes;
+    pcre *matchRegex = NULL;
+
+    bool filespecUsesRegexes = ((params_.flags & SF_FILESPEC_REGEXES) != 0);
+    bool matchUsesRegexes    = ((params_.flags & SF_MATCH_REGEXES) != 0);
+
+    if(matchUsesRegexes)
+    {
+        const char *error;
+        int erroffset;
+        int flags = 0;
+        if(!(params_.flags & SF_MATCH_CASE_SENSITIVE))
+            flags |= PCRE_CASELESS;
+        matchRegex = pcre_compile(params_.match.c_str(), flags, &error, &erroffset, NULL);
+        if(!matchRegex)
+        {
+            MessageBox(window_, error, "Match Regex Error", MB_OK);
+            goto cleanup;
+        }
+    }
+
+    for(StringList::iterator it = params_.filespecs.begin(); it != params_.filespecs.end(); it++)
+    {
+        std::string regexString = it->c_str();
+        if(!filespecUsesRegexes)
+            convertWildcard(regexString);
+
+        int flags = 0;
+        if(!(params_.flags & SF_FILESPEC_CASE_SENSITIVE))
+            flags |= PCRE_CASELESS;
+
+        const char *error;
+        int erroffset;
+        pcre *regex = pcre_compile(regexString.c_str(), flags, &error, &erroffset, NULL);
+        if(regex)
+            filespecRegexes.push_back(regex);
+        else
+        {
+            MessageBox(window_, error, "Filespec Regex Error", MB_OK);
+            goto cleanup;
+        }
+    }
+
+    PostMessage(window_, WM_SEARCHCONTEXT_STATE, 1, 0);
 
     while(!paths.empty())
     {
@@ -198,12 +320,12 @@ void SearchContext::searchProc()
             }
             else
             {
-                searchFile(id, filename, entry);
+                searchFile(id, filename, filespecRegexes, matchRegex, entry);
             }
         }
     }
 
-#if 1
+#if 0
     for(int i=0; i<10000; i++)
     {
         char buffer[32];
@@ -220,6 +342,13 @@ void SearchContext::searchProc()
 #endif
 
 cleanup:
+    for(RegexList::iterator it = filespecRegexes.begin(); it != filespecRegexes.end(); it++)
+    {
+        pcre_free(*it);
+    }
+    if(matchRegex)
+        pcre_free(matchRegex);
+    filespecRegexes.clear();
     if(!stop_)
         poke(id, "", true);
     if(findHandle != INVALID_HANDLE_VALUE)
@@ -227,6 +356,7 @@ cleanup:
         FindClose(findHandle);
     }
     pokeFlowControl_ = "";
+    PostMessage(window_, WM_SEARCHCONTEXT_STATE, 0, 0);
 }
 
 // ------------------------------------------------------------------------------------------------
