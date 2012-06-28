@@ -86,7 +86,7 @@ void SearchContext::append(int id, SearchEntry &entry)
 
 	int textOffset = 0;
     std::string str = generateDisplay(entry, textOffset);
-    offset_ += str.length();
+    offset_ += str.length() - 1;
 
     entry.offset_ = offset_;
     list_.push_back(entry);
@@ -102,7 +102,7 @@ void SearchContext::poke(int id, const std::string &str, HighlightList &highligh
 	{
 		int additionalOffset = pokeData_->text.length() + highlightOffset;
         pokeData_->text += str;
-		for(HighlightList::iterator it = highlights.begin(); it != highlights.end(); it++)
+		for(HighlightList::iterator it = highlights.begin(); it != highlights.end(); ++it)
 		{
 			pokeData_->highlights.push_back(Highlight(it->offset + additionalOffset, it->count));
 		}
@@ -114,6 +114,12 @@ void SearchContext::poke(int id, const std::string &str, HighlightList &highligh
         if(finished || (now > (lastPoke_ + (1000 / POKES_PER_SECOND))))
         {
             lastPoke_ = now;
+
+            char buffer[256];
+            sprintf(buffer, "Frisking: %d dirs, %d files", directoriesSearched_+directoriesSkipped_, filesSearched_+filesSkipped_);
+            if(!finished)
+                pokeData_->progress = buffer;
+
             PostMessage(window_, WM_SEARCHCONTEXT_POKE, id, (LPARAM)pokeData_);
             pokeData_ = new PokeData;
         }
@@ -195,7 +201,7 @@ static char *nextToken(char **p, char sep)
 bool SearchContext::searchFile(int id, const std::string &filename, RegexList &filespecRegexes, pcre *matchRegex)
 {
     bool matchesOneFilespec = false;
-    for(RegexList::iterator it = filespecRegexes.begin(); it != filespecRegexes.end(); it++)
+    for(RegexList::iterator it = filespecRegexes.begin(); it != filespecRegexes.end(); ++it)
     {
         pcre *regex = *it;
         if(pcre_exec(regex, NULL, filename.c_str(), filename.length(), 0, 0, NULL, 0) >= 0)
@@ -372,9 +378,11 @@ void SearchContext::searchProc()
     RegexList filespecRegexes;
     pcre *matchRegex = NULL;
 
-    int directoriesSearched = 0;
-    int filesSearched = 0;
-    int filesSkipped = 0;
+    directoriesSearched_ = 0;
+    directoriesSkipped_ = 0;
+    filesSearched_ = 0;
+    filesSkipped_ = 0;
+    filesSkippedInaRow_ = 0;
 
     unsigned int startTick = GetTickCount();
 
@@ -399,7 +407,7 @@ void SearchContext::searchProc()
         }
     }
 
-    for(StringList::iterator it = params_.filespecs.begin(); it != params_.filespecs.end(); it++)
+    for(StringList::iterator it = params_.filespecs.begin(); it != params_.filespecs.end(); ++it)
     {
         std::string regexString = it->c_str();
         if(!filespecUsesRegexes)
@@ -425,7 +433,7 @@ void SearchContext::searchProc()
 
     while(!paths.empty())
     {
-        directoriesSearched++;
+        directoriesSearched_++;
         stopCheck();
 
         std::string currentSearchPath = paths.back();
@@ -441,13 +449,17 @@ void SearchContext::searchProc()
         while(FindNextFile(findHandle, &wfd))
         {
             stopCheck();
+            bool isDirectory = ((wfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
+
             if((wfd.cFileName[0] == '.') || (wfd.cFileName[0] == 0))
             {
-                filesSkipped++;
+                if(isDirectory)
+                    directoriesSkipped_++;
+                else
+                    filesSkipped_++;
                 continue;
             }
 
-            bool isDirectory = ((wfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
             std::string filename = currentSearchPath;
             filename += "\\";
             filename += wfd.cFileName;
@@ -460,15 +472,24 @@ void SearchContext::searchProc()
             else
             {
                 if(searchFile(id, filename, filespecRegexes, matchRegex))
-                    filesSearched++;
+                {
+                    filesSearched_++;
+                    filesSkippedInaRow_ = 0;
+                }
                 else
-                    filesSkipped++;
+                {
+                    filesSkipped_++;
+                    filesSkippedInaRow_++;
+
+                    if(filesSkippedInaRow_ > 50)
+                        poke(id, "", HighlightList(), 0, false);
+                }
             }
         }
     }
 
 cleanup:
-    for(RegexList::iterator it = filespecRegexes.begin(); it != filespecRegexes.end(); it++)
+    for(RegexList::iterator it = filespecRegexes.begin(); it != filespecRegexes.end(); ++it)
     {
         pcre_free(*it);
     }
@@ -481,9 +502,9 @@ cleanup:
         char buffer[256];
         float sec = (endTick - startTick) / 1000.0f;
         if(params_.flags & SF_REPLACE)
-            sprintf(buffer, "\n%d directories scanned, %d files updated, %d files skipped (%3.3f sec)", directoriesSearched, filesSearched, filesSkipped, sec);
+            sprintf(buffer, "\n%d directories scanned, %d files updated, %d files skipped (%3.3f sec)", directoriesSearched_, filesSearched_, filesSkipped_, sec);
         else
-            sprintf(buffer, "\n%d directories scanned, %d files searched, %d files skipped (%3.3f sec)", directoriesSearched, filesSearched, filesSkipped, sec);
+            sprintf(buffer, "\n%d directories scanned, %d files searched, %d files skipped (%3.3f sec)", directoriesSearched_, filesSearched_, filesSkipped_, sec);
         poke(id, buffer, HighlightList(), 0, true);
     }
     if(findHandle != INVALID_HANDLE_VALUE)

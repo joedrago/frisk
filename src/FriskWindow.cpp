@@ -58,7 +58,7 @@ static void comboClear(HWND ctrl)
 static void comboSet(HWND ctrl, StringList &list)
 {
     comboClear(ctrl);
-    for(StringList::iterator it = list.begin(); it != list.end(); it++)
+    for(StringList::iterator it = list.begin(); it != list.end(); ++it)
     {
         SendMessage(ctrl, CB_ADDSTRING, 0, (LPARAM)it->c_str());
     }
@@ -70,7 +70,7 @@ static void comboLRU(HWND ctrl, StringList &list, unsigned int maxRecent)
 {
     std::string chosen = getWindowText(ctrl);
 
-    for(StringList::iterator it = list.begin(); it != list.end(); it++)
+    for(StringList::iterator it = list.begin(); it != list.end(); ++it)
     {
         int a = it->compare(chosen);
         if(!it->compare(chosen))
@@ -205,10 +205,19 @@ void FriskWindow::windowToConfig()
     config_->windowH_ = windowRect.bottom - windowRect.top;
 }
 
-void FriskWindow::updateState()
+void FriskWindow::updateState(const std::string &progress)
 {
-    const char *running = running_ ? "Frisking, please wait..." : "";
-    setWindowText(stateCtrl_, running);
+    if(running_)
+    {
+        if(progress.empty())
+            setWindowText(stateCtrl_, "Frisking, please wait...");
+        else
+            setWindowText(stateCtrl_, progress);
+    }
+    else
+    {
+        setWindowText(stateCtrl_, "");
+    }
     InvalidateRect(stateCtrl_, NULL, TRUE);
 }
 
@@ -243,6 +252,7 @@ INT_PTR FriskWindow::onInitDialog(HWND hDlg, WPARAM wParam, LPARAM lParam)
     HDC dc = GetDC(NULL);
     outputUpdateColors();
     SendMessage(outputCtrl_, EM_SETEVENTMASK, 0, ENM_MOUSEEVENTS);
+    SendMessage(outputCtrl_, EM_LIMITTEXT, 0x7FFFFFFE, 0);
     CHARRANGE charRange;
     charRange.cpMin = -1;
     charRange.cpMax = -1;
@@ -317,7 +327,7 @@ std::string FriskWindow::rtfHighlight(const char *rawLine, HighlightList &highli
 		"\\cf2 ",
 	};
 	int currentColor = 0;
-	for(StringList::iterator it = pieces.begin(); it != pieces.end(); it++)
+	for(StringList::iterator it = pieces.begin(); it != pieces.end(); ++it)
 	{
 		replaceAll(*it, "\\", "\\\\");
 		replaceAll(*it, "{", "\\{");
@@ -337,6 +347,10 @@ INT_PTR FriskWindow::onPoke(WPARAM wParam, LPARAM lParam)
         return FALSE;
 
 	PokeData *pokeData = (PokeData *)lParam;
+    updateState(pokeData->progress);
+
+    if(pokeData->text.empty())
+        return TRUE;
 
     // Disable redrawing briefly
     SendMessage(outputCtrl_, WM_SETREDRAW, FALSE, 0);
@@ -371,8 +385,6 @@ INT_PTR FriskWindow::onPoke(WPARAM wParam, LPARAM lParam)
     // Reenable redrawing and invalidate the window's contents
     SendMessage(outputCtrl_, WM_SETREDRAW, TRUE, 0);
     InvalidateRect(outputCtrl_, NULL, TRUE);
-
-    updateState();
     return TRUE;
 }
 
@@ -538,7 +550,7 @@ void FriskWindow::onDoubleClickOutput()
     context_->lock();
     SearchList &list = context_->list();
     const SearchEntry *entry = NULL;
-    for(SearchList::const_iterator it = list.begin(); it != list.end(); it++)
+    for(SearchList::const_iterator it = list.begin(); it != list.end(); ++it)
     {
         if(it->offset_ > offset)
         {

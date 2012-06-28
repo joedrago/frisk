@@ -29,7 +29,7 @@ public:
     void configToControls();
     void controlsToConfig();
     void windowToConfig();
-    void updateState();
+    void updateState(const std::string &progress = "");
 	std::string rtfHighlight(const char *rawLine, HighlightList &highlights, int count);
 
     INT_PTR onInitDialog(HWND hDlg, WPARAM wParam, LPARAM lParam);

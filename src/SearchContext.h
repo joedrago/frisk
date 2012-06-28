@@ -68,6 +68,7 @@ struct SearchParams
 
 struct PokeData // pika, pika!
 {
+    std::string progress;
 	std::string text;
 	HighlightList highlights;
 };
@@ -99,6 +100,12 @@ public:
     void searchProc();
 protected:
     bool searchFile(int id, const std::string &filename, RegexList &filespecRegexes, pcre *matchRegex);
+
+    int directoriesSearched_;
+    int directoriesSkipped_;
+    int filesSearched_;
+    int filesSkipped_;
+    int filesSkippedInaRow_;
 
     HWND window_;
 
