@@ -7,6 +7,7 @@
 #define IDI_SMALL                               108
 #define IDD_SETTINGS                            129
 #define IDC_BROWSE                              1001
+#define IDC_STOP                                1002
 #define IDC_MATCH                               1003
 #define IDC_PATH                                1004
 #define IDC_FILESPEC                            1005
@@ -28,3 +29,6 @@
 #define IDC_TEXTSIZE                            1024
 #define IDC_CMD_ASSOC                           1028
 #define IDC_CMD_NOTEPAD                         1029
+#define IDC_BACKUP_EXT                          1030
+#define IDC_TRIM_FILENAMES                      1032
+#define IDC_BACKUP                              1033

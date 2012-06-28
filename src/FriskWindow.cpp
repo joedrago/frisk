@@ -22,12 +22,12 @@ static bool hasWindowText(HWND ctrl)
     return (len > 0);
 }
 
-static bool ctrlIsChecked(HWND ctrl)
+bool ctrlIsChecked(HWND ctrl)
 {
     return (SendMessage(ctrl, BM_GETCHECK, 0, 0) == BST_CHECKED);
 }
 
-static void checkCtrl(HWND ctrl, bool checked)
+void checkCtrl(HWND ctrl, bool checked)
 {
     PostMessage(ctrl, BM_SETCHECK, checked ? BST_CHECKED : BST_UNCHECKED, 0);
 }
@@ -167,12 +167,14 @@ void FriskWindow::configToControls()
     comboSet(matchCtrl_, config_->matches_);
     comboSet(filespecCtrl_, config_->filespecs_);
     comboSet(replaceCtrl_, config_->replaces_);
+	comboSet(backupExtCtrl_, config_->backupExtensions_);
 
     checkCtrl(GetDlgItem(dialog_, IDC_RECURSIVE),      0 != (config_->flags_ & SF_RECURSIVE));
     checkCtrl(GetDlgItem(dialog_, IDC_FILESPEC_REGEX), 0 != (config_->flags_ & SF_FILESPEC_REGEXES));
     checkCtrl(GetDlgItem(dialog_, IDC_FILESPEC_CASE),  0 != (config_->flags_ & SF_FILESPEC_CASE_SENSITIVE));
     checkCtrl(GetDlgItem(dialog_, IDC_MATCH_REGEXES),  0 != (config_->flags_ & SF_MATCH_REGEXES));
     checkCtrl(GetDlgItem(dialog_, IDC_MATCH_CASE),     0 != (config_->flags_ & SF_MATCH_CASE_SENSITIVE));
+    checkCtrl(GetDlgItem(dialog_, IDC_BACKUP),         0 != (config_->flags_ & SF_BACKUP));
 }
 
 void FriskWindow::controlsToConfig()
@@ -181,18 +183,21 @@ void FriskWindow::controlsToConfig()
     comboLRU(matchCtrl_, config_->matches_, 10);
     comboLRU(filespecCtrl_, config_->filespecs_, 10);
     comboLRU(replaceCtrl_, config_->replaces_, 10);
+    comboLRU(backupExtCtrl_, config_->backupExtensions_, 10);
 
-    config_->flags_ = 0;
-    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_RECURSIVE)))
-        config_->flags_ |= SF_RECURSIVE;
-    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_FILESPEC_REGEX)))
-        config_->flags_ |= SF_FILESPEC_REGEXES;
-    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_FILESPEC_CASE)))
-        config_->flags_ |= SF_FILESPEC_CASE_SENSITIVE;
-    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_MATCH_REGEXES)))
-        config_->flags_ |= SF_MATCH_REGEXES;
-    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_MATCH_CASE)))
-        config_->flags_ |= SF_MATCH_CASE_SENSITIVE;
+    config_->flags_ &= ~(
+		  SF_RECURSIVE 
+		| SF_FILESPEC_REGEXES 
+		| SF_FILESPEC_CASE_SENSITIVE 
+		| SF_MATCH_REGEXES
+		| SF_MATCH_CASE_SENSITIVE
+		| SF_BACKUP);
+    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_RECURSIVE)))      config_->flags_ |= SF_RECURSIVE;
+    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_FILESPEC_REGEX))) config_->flags_ |= SF_FILESPEC_REGEXES;
+    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_FILESPEC_CASE)))  config_->flags_ |= SF_FILESPEC_CASE_SENSITIVE;
+    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_MATCH_REGEXES)))  config_->flags_ |= SF_MATCH_REGEXES;
+    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_MATCH_CASE)))     config_->flags_ |= SF_MATCH_CASE_SENSITIVE;
+    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_BACKUP)))         config_->flags_ |= SF_BACKUP;
 }
 
 void FriskWindow::windowToConfig()
@@ -213,10 +218,12 @@ void FriskWindow::updateState(const std::string &progress)
             setWindowText(stateCtrl_, "Frisking, please wait...");
         else
             setWindowText(stateCtrl_, progress);
+		ShowWindow(GetDlgItem(dialog_, IDC_STOP), SW_SHOW);
     }
     else
     {
         setWindowText(stateCtrl_, "");
+		ShowWindow(GetDlgItem(dialog_, IDC_STOP), SW_HIDE);
     }
     InvalidateRect(stateCtrl_, NULL, TRUE);
 }
@@ -225,21 +232,23 @@ void FriskWindow::updateState(const std::string &progress)
 
 INT_PTR FriskWindow::onInitDialog(HWND hDlg, WPARAM wParam, LPARAM lParam)
 {
-    dialog_       = hDlg;
-    context_      = new SearchContext(dialog_);
-    config_       = &(context_->config());
-    outputCtrl_   = GetDlgItem(hDlg, IDC_OUTPUT);
-    pathCtrl_     = GetDlgItem(hDlg, IDC_PATH);
-    filespecCtrl_ = GetDlgItem(hDlg, IDC_FILESPEC);
-    matchCtrl_    = GetDlgItem(hDlg, IDC_MATCH);
-    stateCtrl_    = GetDlgItem(hDlg, IDC_STATE);
-    replaceCtrl_  = GetDlgItem(hDlg, IDC_REPLACE);
+    dialog_        = hDlg;
+    context_       = new SearchContext(dialog_);
+    config_        = &(context_->config());
+    outputCtrl_    = GetDlgItem(hDlg, IDC_OUTPUT);
+    pathCtrl_      = GetDlgItem(hDlg, IDC_PATH);
+    filespecCtrl_  = GetDlgItem(hDlg, IDC_FILESPEC);
+    matchCtrl_     = GetDlgItem(hDlg, IDC_MATCH);
+    stateCtrl_     = GetDlgItem(hDlg, IDC_STATE);
+    replaceCtrl_   = GetDlgItem(hDlg, IDC_REPLACE);
+	backupExtCtrl_ = GetDlgItem(hDlg, IDC_BACKUP_EXT);
 
-    SendMessage(pathCtrl_,     WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
-    SendMessage(filespecCtrl_, WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
-    SendMessage(matchCtrl_,    WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
-    SendMessage(stateCtrl_,    WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
-    SendMessage(replaceCtrl_,  WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+    SendMessage(pathCtrl_,      WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+    SendMessage(filespecCtrl_,  WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+    SendMessage(matchCtrl_,     WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+    SendMessage(stateCtrl_,     WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+    SendMessage(replaceCtrl_,   WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+    SendMessage(backupExtCtrl_, WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
 
     SendMessage(GetDlgItem(dialog_, IDC_RECURSIVE),      WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
     SendMessage(GetDlgItem(dialog_, IDC_FILESPEC_REGEX), WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
@@ -470,6 +479,8 @@ void FriskWindow::search(int extraFlags)
         return;
     }
 
+	ShowWindow(GetDlgItem(dialog_, IDC_STOP), SW_SHOW);
+
     controlsToConfig();
     config_->save();
 
@@ -480,6 +491,7 @@ void FriskWindow::search(int extraFlags)
     params.flags = config_->flags_ | extraFlags;
     params.match = config_->matches_[0];
     params.replace = config_->replaces_[0];
+	params.backupExtension = config_->backupExtensions_[0];
     split(config_->paths_[0], ";", params.paths);
     split(config_->filespecs_[0], ";", params.filespecs);
     context_->search(params);
@@ -538,6 +550,11 @@ void FriskWindow::onBrowse()
             setWindowText(pathCtrl_, fn);
         }
     }
+}
+
+void FriskWindow::onStop()
+{
+	context_->stop();
 }
 
 void FriskWindow::onDoubleClickOutput()
@@ -602,6 +619,7 @@ static INT_PTR CALLBACK FriskProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM
                 processCommand(IDC_DOREPLACE, onReplace);
                 processCommand(IDC_SETTINGS, onSettings);
                 processCommand(IDC_BROWSE, onBrowse);
+				processCommand(IDC_STOP, onStop);
             };
     }
     return (INT_PTR)FALSE;

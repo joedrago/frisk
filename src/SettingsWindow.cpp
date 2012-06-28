@@ -37,6 +37,7 @@ INT_PTR SettingsWindow::onInitDialog(HWND hDlg, WPARAM wParam, LPARAM lParam)
 	char textSizeStr[32];
 	sprintf(textSizeStr, "%d", config_->textSize_);
 	setWindowText(GetDlgItem(dialog_, IDC_TEXTSIZE), textSizeStr);
+    checkCtrl(GetDlgItem(dialog_, IDC_TRIM_FILENAMES), 0 != (config_->flags_ & SF_TRIM_FILENAMES));
     return TRUE;
 }
 
@@ -46,6 +47,10 @@ void SettingsWindow::onOK()
     config_->backgroundColor_ = backgroundColor_;
 	config_->highlightColor_ = highlightColor_;
     config_->cmdTemplate_ = getWindowText(GetDlgItem(dialog_, IDC_CMD));
+    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_TRIM_FILENAMES))) 
+		config_->flags_ |= SF_TRIM_FILENAMES;
+	else
+		config_->flags_ &= ~SF_TRIM_FILENAMES;
 
 	std::string textSizeStr = getWindowText(GetDlgItem(dialog_, IDC_TEXTSIZE));
 	int textSize = atoi(textSizeStr.c_str());

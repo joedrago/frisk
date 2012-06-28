@@ -48,6 +48,7 @@ public:
     void onDoubleClickOutput();
     void onSettings();
     void onBrowse();
+	void onStop();
 protected:
     HINSTANCE instance_;
     HFONT font_;
@@ -58,6 +59,7 @@ protected:
     HWND matchCtrl_;
     HWND stateCtrl_;
     HWND replaceCtrl_;
+	HWND backupExtCtrl_;
     SearchContext *context_;
     SearchConfig *config_;
     bool running_;

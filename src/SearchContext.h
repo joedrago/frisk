@@ -20,6 +20,8 @@
 void replaceAll(std::string &s, const char *f, const char *r);
 std::string getWindowText(HWND ctrl);
 void setWindowText(HWND ctrl, const std::string &s);
+bool ctrlIsChecked(HWND ctrl);
+void checkCtrl(HWND ctrl, bool checked);
 
 class ScopedMutex
 {
@@ -63,6 +65,7 @@ struct SearchParams
     StringList filespecs;
     std::string match;
     std::string replace;
+	std::string backupExtension;
     int flags;
 };
 

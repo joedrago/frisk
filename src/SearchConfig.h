@@ -24,6 +24,7 @@ enum SearchFlag
     SF_MATCH_CASE_SENSITIVE    = (1 << 4),
     SF_REPLACE                 = (1 << 5),
     SF_BACKUP                  = (1 << 6),
+	SF_TRIM_FILENAMES          = (1 << 7),
 
     SF_COUNT
 };
@@ -43,6 +44,7 @@ public:
     StringList paths_;
     StringList filespecs_;
     StringList replaces_;
+	StringList backupExtensions_;
 
     int windowX_;
     int windowY_;

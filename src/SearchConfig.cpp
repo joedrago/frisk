@@ -163,12 +163,13 @@ SearchConfig::SearchConfig()
     windowW_ = 0;
     windowH_ = 0;
     windowMaximized_ = 0;
-    flags_ = SF_RECURSIVE;
+    flags_ = SF_RECURSIVE | SF_BACKUP;
     textColor_ = RGB(0, 0, 0);
 	textSize_ = 8;
     backgroundColor_ = RGB(224, 224, 224);
 	highlightColor_ = RGB(255, 0, 0);
     cmdTemplate_ = "notepad.exe \"!FILENAME!\"";
+	backupExtensions_.push_back("friskbackup");
 
     TCHAR tempPath[MAX_PATH];
     if(SUCCEEDED(SHGetFolderPath(NULL, CSIDL_DESKTOPDIRECTORY|CSIDL_FLAG_CREATE, NULL, 0, tempPath)))
@@ -211,6 +212,7 @@ void SearchConfig::load()
     jsonGetStringList(json, "paths", paths_);
     jsonGetStringList(json, "filespecs", filespecs_);
     jsonGetStringList(json, "replaces", replaces_);
+	jsonGetStringList(json, "backupExtensions", backupExtensions_);
     cJSON_Delete(json);
 }
 
@@ -237,6 +239,7 @@ void SearchConfig::save()
     jsonSetStringList(json, "paths", paths_);
     jsonSetStringList(json, "filespecs", filespecs_);
     jsonSetStringList(json, "replaces", replaces_);
+	jsonSetStringList(json, "backupExtensions", backupExtensions_);
 
     char *jsonText = cJSON_Print(json);
     writeEntireFile(filename, jsonText);

@@ -12,6 +12,27 @@
 
 #define POKES_PER_SECOND (5)
 
+static char * strstri(char * haystack, const char * needle)
+{
+    char *front = haystack;
+    for(; *front; front++)
+    {
+        const char *a = front;
+        const char *b = needle;
+
+        while(*a && *b)
+        {
+            if(tolower(*a) != tolower(*b))
+                break;
+            a++;
+            b++;
+        }
+        if(!*b)
+            return front;
+    }
+    return NULL;
+}
+
 // ------------------------------------------------------------------------------------------------
 
 ScopedMutex::ScopedMutex(HANDLE mutex)
@@ -72,7 +93,16 @@ std::string SearchContext::generateDisplay(SearchEntry &entry, int &textOffset)
 	char middle[64];
 	sprintf(middle, "(%d): ", entry.line_);
 
-    std::string s = entry.filename_.c_str();
+	std::string s = entry.filename_.c_str();
+	if(params_.flags & SF_TRIM_FILENAMES)
+	{
+		std::string &startingPath = params_.paths[0];
+		if(strstri((char *)s.c_str(), startingPath.c_str()) == s.c_str())
+		{
+			s = s.substr(startingPath.length() + 1);
+		}
+	}
+
 	s += middle;
 	textOffset = s.length();
 	s += entry.match_;
@@ -153,27 +183,6 @@ void convertWildcard(std::string &regex)
 }
 
 #define stopCheck() { if(stop_) goto cleanup; }
-
-static char * strstri(char * haystack, const char * needle)
-{
-    char *front = haystack;
-    for(; *front; front++)
-    {
-        const char *a = front;
-        const char *b = needle;
-
-        while(*a && *b)
-        {
-            if(tolower(*a) != tolower(*b))
-                break;
-            a++;
-            b++;
-        }
-        if(!*b)
-            return front;
-    }
-    return NULL;
-}
 
 static char *nextToken(char **p, char sep)
 {
@@ -317,17 +326,38 @@ bool SearchContext::searchFile(int id, const std::string &filename, RegexList &f
     {
         if((contents != updatedContents))
         {
-            if(writeEntireFile(filename, updatedContents))
-            {
-                return true;
-            }
-            else
-            {
-                std::string err = "WARNING: Couldn't write to file: ";
-                err += filename;
-                err += "\n";
-                poke(id, err.c_str(), HighlightList(), 0, false);
-            }
+			bool overwriteFile = true;
+			if(params_.flags & SF_BACKUP)
+			{
+				std::string backupFilename = filename;
+				backupFilename += ".";
+				backupFilename += params_.backupExtension;
+
+				if(!writeEntireFile(backupFilename, contents))
+				{
+					std::string err = "WARNING: Couldn't write backup file (skipping replacement): ";
+					err += backupFilename;
+					err += "\n";
+					poke(id, err.c_str(), HighlightList(), 0, false);
+
+					overwriteFile = false;
+				}
+			}
+
+			if(overwriteFile)
+			{
+				if(writeEntireFile(filename, updatedContents))
+				{
+					return true;
+				}
+				else
+				{
+					std::string err = "WARNING: Couldn't write to file: ";
+					err += filename;
+					err += "\n";
+					poke(id, err.c_str(), HighlightList(), 0, false);
+				}
+			}
         }
         return false;
     }
