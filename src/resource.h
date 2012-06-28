@@ -15,6 +15,7 @@
 #define IDC_DOREPLACE                           1007
 #define IDC_OUTPUT                              1008
 #define IDC_REPLACE                             1009
+#define IDC_FILESIZE                            1010
 #define IDC_STATE                               1011
 #define IDC_FILESPEC_REGEX                      1012
 #define IDC_FILESPEC_CASE                       1013

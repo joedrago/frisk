@@ -146,7 +146,7 @@ void SearchContext::poke(int id, const std::string &str, HighlightList &highligh
             lastPoke_ = now;
 
             char buffer[256];
-            sprintf(buffer, "Frisking: %d dirs, %d files", directoriesSearched_+directoriesSkipped_, filesSearched_+filesSkipped_);
+            sprintf(buffer, "%d hits, %d dirs, %d files", hits_, directoriesSearched_+directoriesSkipped_, filesSearched_+filesSkipped_);
             if(!finished)
                 pokeData_->progress = buffer;
 
@@ -223,11 +223,13 @@ bool SearchContext::searchFile(int id, const std::string &filename, RegexList &f
         return false;
 
     std::string contents;
-    if(!readEntireFile(filename, contents))
+    if(!readEntireFile(filename, contents, params_.maxFileSize))
         return false;
 
     std::string workBuffer = contents;
     std::string updatedContents;
+
+    bool atLeastOneMatch = false;
 
     int lineNumber = 1;
     char *p = &workBuffer[0];
@@ -298,8 +300,17 @@ bool SearchContext::searchFile(int id, const std::string &filename, RegexList &f
 					break;
 				}
             }
+
+            if(matches)
+                hits_++;
         }
         while(*line);
+
+        if(!entry.filename_.empty())
+        {
+            linesWithHits_++;
+            atLeastOneMatch = true;
+        }
 
         if(params_.flags & SF_REPLACE)
         {
@@ -322,6 +333,8 @@ bool SearchContext::searchFile(int id, const std::string &filename, RegexList &f
 		}
 		lineNumber++;
     }
+    if(atLeastOneMatch)
+        filesWithHits_++;
     if(params_.flags & SF_REPLACE)
     {
         if((contents != updatedContents))
@@ -413,6 +426,9 @@ void SearchContext::searchProc()
     filesSearched_ = 0;
     filesSkipped_ = 0;
     filesSkippedInaRow_ = 0;
+    filesWithHits_ = 0;
+    linesWithHits_ = 0;
+    hits_ = 0;
 
     unsigned int startTick = GetTickCount();
 
@@ -529,12 +545,20 @@ cleanup:
     if(!stop_)
     {
         unsigned int endTick = GetTickCount();
-        char buffer[256];
+        char buffer[512];
         float sec = (endTick - startTick) / 1000.0f;
+        const char *verb = "searched";
         if(params_.flags & SF_REPLACE)
-            sprintf(buffer, "\n%d directories scanned, %d files updated, %d files skipped (%3.3f sec)", directoriesSearched_, filesSearched_, filesSkipped_, sec);
-        else
-            sprintf(buffer, "\n%d directories scanned, %d files searched, %d files skipped (%3.3f sec)", directoriesSearched_, filesSearched_, filesSkipped_, sec);
+            verb = "updated";
+        sprintf(buffer, "\n%d hits in %d lines across %d files.\n%d directories scanned, %d files %s, %d files skipped (%3.3f sec)", 
+            hits_,
+            linesWithHits_,
+            filesWithHits_,
+            directoriesSearched_,
+            filesSearched_,
+            verb,
+            filesSkipped_,
+            sec);
         poke(id, buffer, HighlightList(), 0, true);
     }
     if(findHandle != INVALID_HANDLE_VALUE)

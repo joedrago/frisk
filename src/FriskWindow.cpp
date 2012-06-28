@@ -104,11 +104,6 @@ static void split(const std::string &orig, const char *delims, StringList &outpu
 FriskWindow::FriskWindow(HINSTANCE instance)
 : instance_(instance)
 , dialog_((HWND)INVALID_HANDLE_VALUE)
-, outputCtrl_((HWND)INVALID_HANDLE_VALUE)
-, pathCtrl_((HWND)INVALID_HANDLE_VALUE)
-, filespecCtrl_((HWND)INVALID_HANDLE_VALUE)
-, matchCtrl_((HWND)INVALID_HANDLE_VALUE)
-, replaceCtrl_((HWND)INVALID_HANDLE_VALUE)
 , context_(NULL)
 , running_(false)
 , closing_(false)
@@ -168,6 +163,7 @@ void FriskWindow::configToControls()
     comboSet(filespecCtrl_, config_->filespecs_);
     comboSet(replaceCtrl_, config_->replaces_);
 	comboSet(backupExtCtrl_, config_->backupExtensions_);
+    comboSet(fileSizesCtrl_, config_->fileSizes_);
 
     checkCtrl(GetDlgItem(dialog_, IDC_RECURSIVE),      0 != (config_->flags_ & SF_RECURSIVE));
     checkCtrl(GetDlgItem(dialog_, IDC_FILESPEC_REGEX), 0 != (config_->flags_ & SF_FILESPEC_REGEXES));
@@ -184,6 +180,7 @@ void FriskWindow::controlsToConfig()
     comboLRU(filespecCtrl_, config_->filespecs_, 10);
     comboLRU(replaceCtrl_, config_->replaces_, 10);
     comboLRU(backupExtCtrl_, config_->backupExtensions_, 10);
+    comboLRU(fileSizesCtrl_, config_->fileSizes_, 10);
 
     config_->flags_ &= ~(
 		  SF_RECURSIVE 
@@ -242,6 +239,7 @@ INT_PTR FriskWindow::onInitDialog(HWND hDlg, WPARAM wParam, LPARAM lParam)
     stateCtrl_     = GetDlgItem(hDlg, IDC_STATE);
     replaceCtrl_   = GetDlgItem(hDlg, IDC_REPLACE);
 	backupExtCtrl_ = GetDlgItem(hDlg, IDC_BACKUP_EXT);
+    fileSizesCtrl_ = GetDlgItem(hDlg, IDC_FILESIZE);
 
     SendMessage(pathCtrl_,      WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
     SendMessage(filespecCtrl_,  WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
@@ -494,6 +492,9 @@ void FriskWindow::search(int extraFlags)
 	params.backupExtension = config_->backupExtensions_[0];
     split(config_->paths_[0], ";", params.paths);
     split(config_->filespecs_[0], ";", params.filespecs);
+    params.maxFileSize = atoi(config_->fileSizes_[0].c_str());
+    if(params.maxFileSize < 0)
+        params.maxFileSize = 0;
     context_->search(params);
 
     updateState();

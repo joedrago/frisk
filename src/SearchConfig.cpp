@@ -31,7 +31,7 @@ static std::string calcConfigFilename()
     return filename;
 }
 
-bool readEntireFile(const std::string &filename, std::string &contents)
+bool readEntireFile(const std::string &filename, std::string &contents, s64 maxSizeKb)
 {
     FILE *f = fopen(filename.c_str(), "rb");
     if(!f)
@@ -41,6 +41,12 @@ bool readEntireFile(const std::string &filename, std::string &contents)
     off_t size = ftell(f);
     fseek(f, 0, SEEK_SET);
     if(size == 0)
+    {
+        fclose(f);
+        return false;
+    }
+
+    if(maxSizeKb && ((size / 1024) > maxSizeKb))
     {
         fclose(f);
         return false;
@@ -170,6 +176,7 @@ SearchConfig::SearchConfig()
 	highlightColor_ = RGB(255, 0, 0);
     cmdTemplate_ = "notepad.exe \"!FILENAME!\"";
 	backupExtensions_.push_back("friskbackup");
+    fileSizes_.push_back("5000");
 
     TCHAR tempPath[MAX_PATH];
     if(SUCCEEDED(SHGetFolderPath(NULL, CSIDL_DESKTOPDIRECTORY|CSIDL_FLAG_CREATE, NULL, 0, tempPath)))
@@ -190,7 +197,7 @@ void SearchConfig::load()
         return;
 
     std::string contents;
-    if(!readEntireFile(filename, contents))
+    if(!readEntireFile(filename, contents, 0))
         return;
 
     cJSON *json = cJSON_Parse(contents.c_str());
@@ -213,6 +220,7 @@ void SearchConfig::load()
     jsonGetStringList(json, "filespecs", filespecs_);
     jsonGetStringList(json, "replaces", replaces_);
 	jsonGetStringList(json, "backupExtensions", backupExtensions_);
+	jsonGetStringList(json, "fileSizes", fileSizes_);
     cJSON_Delete(json);
 }
 
@@ -240,6 +248,7 @@ void SearchConfig::save()
     jsonSetStringList(json, "filespecs", filespecs_);
     jsonSetStringList(json, "replaces", replaces_);
 	jsonSetStringList(json, "backupExtensions", backupExtensions_);
+	jsonSetStringList(json, "fileSizes", fileSizes_);
 
     char *jsonText = cJSON_Print(json);
     writeEntireFile(filename, jsonText);

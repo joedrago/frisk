@@ -60,6 +60,7 @@ protected:
     HWND stateCtrl_;
     HWND replaceCtrl_;
 	HWND backupExtCtrl_;
+    HWND fileSizesCtrl_;
     SearchContext *context_;
     SearchConfig *config_;
     bool running_;

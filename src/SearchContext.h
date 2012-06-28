@@ -66,6 +66,7 @@ struct SearchParams
     std::string match;
     std::string replace;
 	std::string backupExtension;
+    s64 maxFileSize;
     int flags;
 };
 
@@ -109,6 +110,9 @@ protected:
     int filesSearched_;
     int filesSkipped_;
     int filesSkippedInaRow_;
+    int filesWithHits_;
+    int linesWithHits_;
+    int hits_;
 
     HWND window_;
 

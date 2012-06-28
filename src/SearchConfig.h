@@ -11,8 +11,10 @@
 #include <string>
 #include <vector>
 
+typedef long long s64;
+
 typedef std::vector<std::string> StringList;
-bool readEntireFile(const std::string &filename, std::string &contents);
+bool readEntireFile(const std::string &filename, std::string &contents, s64 maxSizeKb);
 bool writeEntireFile(const std::string &filename, const std::string &contents);
 
 enum SearchFlag
@@ -45,6 +47,7 @@ public:
     StringList filespecs_;
     StringList replaces_;
 	StringList backupExtensions_;
+    StringList fileSizes_;
 
     int windowX_;
     int windowY_;
