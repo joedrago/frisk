@@ -159,6 +159,40 @@ static void jsonSetStringList(cJSON *json, const char *k, const StringList &v)
     free(rawStrings);
 }
 
+static bool jsonGetSavedSearch(cJSON *json, SavedSearch &savedSearch)
+{
+	if(json->type != cJSON_Object)
+		return false;
+
+	jsonGetString(json, "name", savedSearch.name);
+	jsonGetString(json, "match", savedSearch.match);
+	jsonGetString(json, "path", savedSearch.path);
+	jsonGetString(json, "filespec", savedSearch.filespec);
+	jsonGetString(json, "fileSize", savedSearch.fileSize);
+	jsonGetString(json, "replace", savedSearch.replace);
+	jsonGetString(json, "backupExtension", savedSearch.backupExtension);
+	jsonGetInt(json, "flags", savedSearch.flags);
+
+	return true;
+}
+
+static bool jsonSetSavedSearch(cJSON *json, SavedSearch &savedSearch)
+{
+	if(json->type != cJSON_Object)
+		return false;
+
+	jsonSetString(json, "name", savedSearch.name);
+	jsonSetString(json, "match", savedSearch.match);
+	jsonSetString(json, "path", savedSearch.path);
+	jsonSetString(json, "filespec", savedSearch.filespec);
+	jsonSetString(json, "fileSize", savedSearch.fileSize);
+	jsonSetString(json, "replace", savedSearch.replace);
+	jsonSetString(json, "backupExtension", savedSearch.backupExtension);
+	jsonSetInt(json, "flags", savedSearch.flags);
+
+	return true;
+}
+
 // ------------------------------------------------------------------------------------------------
 
 SearchConfig::SearchConfig()
@@ -221,6 +255,20 @@ void SearchConfig::load()
     jsonGetStringList(json, "replaces", replaces_);
 	jsonGetStringList(json, "backupExtensions", backupExtensions_);
 	jsonGetStringList(json, "fileSizes", fileSizes_);
+
+	cJSON *savedSearches = cJSON_GetObjectItem(json, "savedSearches");
+	if(savedSearches && savedSearches->type == cJSON_Array)
+	{
+		for(savedSearches = savedSearches->child; savedSearches; savedSearches = savedSearches->next)
+		{
+			SavedSearch savedSearch;
+			if(jsonGetSavedSearch(savedSearches, savedSearch))
+			{
+				savedSearches_.push_back(savedSearch);
+			}
+		}
+	}
+
     cJSON_Delete(json);
 }
 
@@ -250,8 +298,23 @@ void SearchConfig::save()
 	jsonSetStringList(json, "backupExtensions", backupExtensions_);
 	jsonSetStringList(json, "fileSizes", fileSizes_);
 
+	cJSON *savedSearches = cJSON_CreateArray();
+	cJSON_AddItemToObject(json, "savedSearches", savedSearches);
+	for(SavedSearchList::iterator it = savedSearches_.begin(); it != savedSearches_.end(); ++it)
+	{
+		cJSON *savedSearch = cJSON_CreateObject();
+		if(jsonSetSavedSearch(savedSearch, *it))
+		{
+			cJSON_AddItemToArray(savedSearches, savedSearch);
+		}
+		else
+		{
+			cJSON_Delete(savedSearch);
+		}
+	}
+
     char *jsonText = cJSON_Print(json);
-    writeEntireFile(filename, jsonText);
+	writeEntireFile(filename, jsonText);
 
     cJSON_Delete(json);
 }

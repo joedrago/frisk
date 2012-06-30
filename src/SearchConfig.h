@@ -31,6 +31,20 @@ enum SearchFlag
     SF_COUNT
 };
 
+struct SavedSearch
+{
+	std::string name;
+	std::string match;
+	std::string path;
+	std::string filespec;
+	std::string fileSize;
+	std::string replace;
+	std::string backupExtension;
+	int flags;
+};
+
+typedef std::vector<SavedSearch> SavedSearchList;
+
 class SearchConfig
 {
 public:
@@ -59,6 +73,8 @@ public:
     int textColor_;
     int backgroundColor_;
 	int highlightColor_;
+
+	SavedSearchList savedSearches_;
 };
 
 #endif

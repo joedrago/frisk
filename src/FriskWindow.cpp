@@ -156,6 +156,36 @@ void FriskWindow::outputUpdateColors()
     InvalidateRect(outputCtrl_, NULL, TRUE);
 }
 
+int FriskWindow::flagsFromControls()
+{
+	int flags = config_->flags_;
+    flags &= ~(
+		  SF_RECURSIVE 
+		| SF_FILESPEC_REGEXES 
+		| SF_FILESPEC_CASE_SENSITIVE 
+		| SF_MATCH_REGEXES
+		| SF_MATCH_CASE_SENSITIVE
+		| SF_BACKUP);
+    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_RECURSIVE)))      flags |= SF_RECURSIVE;
+    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_FILESPEC_REGEX))) flags |= SF_FILESPEC_REGEXES;
+    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_FILESPEC_CASE)))  flags |= SF_FILESPEC_CASE_SENSITIVE;
+    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_MATCH_REGEXES)))  flags |= SF_MATCH_REGEXES;
+    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_MATCH_CASE)))     flags |= SF_MATCH_CASE_SENSITIVE;
+    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_BACKUP)))         flags |= SF_BACKUP;
+
+	return flags;
+}
+
+void FriskWindow::flagsToControls(int flags)
+{
+    checkCtrl(GetDlgItem(dialog_, IDC_RECURSIVE),      0 != (flags & SF_RECURSIVE));
+    checkCtrl(GetDlgItem(dialog_, IDC_FILESPEC_REGEX), 0 != (flags & SF_FILESPEC_REGEXES));
+    checkCtrl(GetDlgItem(dialog_, IDC_FILESPEC_CASE),  0 != (flags & SF_FILESPEC_CASE_SENSITIVE));
+    checkCtrl(GetDlgItem(dialog_, IDC_MATCH_REGEXES),  0 != (flags & SF_MATCH_REGEXES));
+    checkCtrl(GetDlgItem(dialog_, IDC_MATCH_CASE),     0 != (flags & SF_MATCH_CASE_SENSITIVE));
+    checkCtrl(GetDlgItem(dialog_, IDC_BACKUP),         0 != (flags & SF_BACKUP));
+}
+
 void FriskWindow::configToControls()
 {
     comboSet(pathCtrl_, config_->paths_);
@@ -164,13 +194,7 @@ void FriskWindow::configToControls()
     comboSet(replaceCtrl_, config_->replaces_);
 	comboSet(backupExtCtrl_, config_->backupExtensions_);
     comboSet(fileSizesCtrl_, config_->fileSizes_);
-
-    checkCtrl(GetDlgItem(dialog_, IDC_RECURSIVE),      0 != (config_->flags_ & SF_RECURSIVE));
-    checkCtrl(GetDlgItem(dialog_, IDC_FILESPEC_REGEX), 0 != (config_->flags_ & SF_FILESPEC_REGEXES));
-    checkCtrl(GetDlgItem(dialog_, IDC_FILESPEC_CASE),  0 != (config_->flags_ & SF_FILESPEC_CASE_SENSITIVE));
-    checkCtrl(GetDlgItem(dialog_, IDC_MATCH_REGEXES),  0 != (config_->flags_ & SF_MATCH_REGEXES));
-    checkCtrl(GetDlgItem(dialog_, IDC_MATCH_CASE),     0 != (config_->flags_ & SF_MATCH_CASE_SENSITIVE));
-    checkCtrl(GetDlgItem(dialog_, IDC_BACKUP),         0 != (config_->flags_ & SF_BACKUP));
+	flagsToControls(config_->flags_);
 }
 
 void FriskWindow::controlsToConfig()
@@ -181,20 +205,7 @@ void FriskWindow::controlsToConfig()
     comboLRU(replaceCtrl_, config_->replaces_, 10);
     comboLRU(backupExtCtrl_, config_->backupExtensions_, 10);
     comboLRU(fileSizesCtrl_, config_->fileSizes_, 10);
-
-    config_->flags_ &= ~(
-		  SF_RECURSIVE 
-		| SF_FILESPEC_REGEXES 
-		| SF_FILESPEC_CASE_SENSITIVE 
-		| SF_MATCH_REGEXES
-		| SF_MATCH_CASE_SENSITIVE
-		| SF_BACKUP);
-    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_RECURSIVE)))      config_->flags_ |= SF_RECURSIVE;
-    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_FILESPEC_REGEX))) config_->flags_ |= SF_FILESPEC_REGEXES;
-    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_FILESPEC_CASE)))  config_->flags_ |= SF_FILESPEC_CASE_SENSITIVE;
-    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_MATCH_REGEXES)))  config_->flags_ |= SF_MATCH_REGEXES;
-    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_MATCH_CASE)))     config_->flags_ |= SF_MATCH_CASE_SENSITIVE;
-    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_BACKUP)))         config_->flags_ |= SF_BACKUP;
+	config_->flags_ = flagsFromControls();
 }
 
 void FriskWindow::windowToConfig()
@@ -229,24 +240,26 @@ void FriskWindow::updateState(const std::string &progress)
 
 INT_PTR FriskWindow::onInitDialog(HWND hDlg, WPARAM wParam, LPARAM lParam)
 {
-    dialog_        = hDlg;
-    context_       = new SearchContext(dialog_);
-    config_        = &(context_->config());
-    outputCtrl_    = GetDlgItem(hDlg, IDC_OUTPUT);
-    pathCtrl_      = GetDlgItem(hDlg, IDC_PATH);
-    filespecCtrl_  = GetDlgItem(hDlg, IDC_FILESPEC);
-    matchCtrl_     = GetDlgItem(hDlg, IDC_MATCH);
-    stateCtrl_     = GetDlgItem(hDlg, IDC_STATE);
-    replaceCtrl_   = GetDlgItem(hDlg, IDC_REPLACE);
-	backupExtCtrl_ = GetDlgItem(hDlg, IDC_BACKUP_EXT);
-    fileSizesCtrl_ = GetDlgItem(hDlg, IDC_FILESIZE);
+    dialog_            = hDlg;
+    context_           = new SearchContext(dialog_);
+    config_            = &(context_->config());
+    outputCtrl_        = GetDlgItem(hDlg, IDC_OUTPUT);
+    pathCtrl_          = GetDlgItem(hDlg, IDC_PATH);
+    filespecCtrl_      = GetDlgItem(hDlg, IDC_FILESPEC);
+    matchCtrl_         = GetDlgItem(hDlg, IDC_MATCH);
+    stateCtrl_         = GetDlgItem(hDlg, IDC_STATE);
+    replaceCtrl_       = GetDlgItem(hDlg, IDC_REPLACE);
+	backupExtCtrl_     = GetDlgItem(hDlg, IDC_BACKUP_EXT);
+    fileSizesCtrl_     = GetDlgItem(hDlg, IDC_FILESIZE);
+	savedSearchesCtrl_ = GetDlgItem(hDlg, IDC_SAVEDSEARCHES);
 
-    SendMessage(pathCtrl_,      WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
-    SendMessage(filespecCtrl_,  WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
-    SendMessage(matchCtrl_,     WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
-    SendMessage(stateCtrl_,     WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
-    SendMessage(replaceCtrl_,   WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
-    SendMessage(backupExtCtrl_, WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+    SendMessage(pathCtrl_,          WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+    SendMessage(filespecCtrl_,      WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+    SendMessage(matchCtrl_,         WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+    SendMessage(stateCtrl_,         WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+    SendMessage(replaceCtrl_,       WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+    SendMessage(backupExtCtrl_,     WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+    SendMessage(savedSearchesCtrl_, WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
 
     SendMessage(GetDlgItem(dialog_, IDC_RECURSIVE),      WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
     SendMessage(GetDlgItem(dialog_, IDC_FILESPEC_REGEX), WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
@@ -268,6 +281,7 @@ INT_PTR FriskWindow::onInitDialog(HWND hDlg, WPARAM wParam, LPARAM lParam)
 
     configToControls();
     updateState();
+	updateSavedSearchControl();
 
     HICON hIcon;
     hIcon = (HICON)LoadImage(instance_,
@@ -346,6 +360,45 @@ std::string FriskWindow::rtfHighlight(const char *rawLine, HighlightList &highli
 	}
 	rtf += "}";
 	return rtf;
+}
+
+bool FriskWindow::ensureSavedSearchNameExists()
+{
+	bool ret = true;
+	std::string name = getWindowText(savedSearchesCtrl_);
+
+	if(name.empty())
+		ret = false;
+	// TODO: check for only spaces?
+
+	if(!ret)
+	{
+		MessageBox(dialog_, "Please type in or choose a saved search name first.", "Error", MB_OK);
+	}
+	return ret;
+}
+
+void FriskWindow::deleteCurrentSavedSearch()
+{
+	std::string name = getWindowText(savedSearchesCtrl_);
+	for(SavedSearchList::iterator it = config_->savedSearches_.begin(); it != config_->savedSearches_.end(); ++it)
+	{
+		if(it->name == name)
+		{
+			config_->savedSearches_.erase(it);
+			break;
+		}
+	}
+}
+
+void FriskWindow::updateSavedSearchControl()
+{
+	comboClear(savedSearchesCtrl_);
+
+	for(SavedSearchList::iterator it = config_->savedSearches_.begin(); it != config_->savedSearches_.end(); ++it)
+    {
+        SendMessage(savedSearchesCtrl_, CB_ADDSTRING, 0, (LPARAM)it->name.c_str());
+    }
 }
 
 INT_PTR FriskWindow::onPoke(WPARAM wParam, LPARAM lParam)
@@ -558,6 +611,70 @@ void FriskWindow::onStop()
 	context_->stop();
 }
 
+void FriskWindow::onLoad()
+{
+	if(!ensureSavedSearchNameExists())
+		return;
+
+	std::string name = getWindowText(savedSearchesCtrl_);
+	for(SavedSearchList::iterator it = config_->savedSearches_.begin(); it != config_->savedSearches_.end(); ++it)
+	{
+		if(it->name == name)
+		{
+			setWindowText(savedSearchesCtrl_, it->name);
+			setWindowText(matchCtrl_, it->match);
+			setWindowText(pathCtrl_, it->path);
+			setWindowText(filespecCtrl_, it->filespec);
+			setWindowText(fileSizesCtrl_, it->fileSize);
+			setWindowText(replaceCtrl_, it->replace);
+			setWindowText(backupExtCtrl_, it->backupExtension);
+			flagsToControls(it->flags);
+
+			SendMessage(dialog_, WM_SETFOCUS, (WPARAM)matchCtrl_, 0);
+			return;
+		}
+	}
+
+	MessageBox(dialog_, "No saved search with that name.", "Error", MB_OK);
+}
+
+void FriskWindow::onSave()
+{
+	if(!ensureSavedSearchNameExists())
+		return;
+
+	if(MessageBox(dialog_, "Are you sure you want to save this search?", "Confirmation", MB_YESNO) != IDYES)
+		return;
+
+	deleteCurrentSavedSearch();
+
+	SavedSearch savedSearch;
+	savedSearch.name = getWindowText(savedSearchesCtrl_);
+	savedSearch.match = getWindowText(matchCtrl_);
+	savedSearch.path = getWindowText(pathCtrl_);
+	savedSearch.filespec = getWindowText(filespecCtrl_);
+	savedSearch.fileSize = getWindowText(fileSizesCtrl_);
+	savedSearch.replace = getWindowText(replaceCtrl_);
+	savedSearch.backupExtension = getWindowText(backupExtCtrl_);
+	savedSearch.flags = flagsFromControls();
+	config_->savedSearches_.push_back(savedSearch);
+
+	updateSavedSearchControl();
+}
+
+void FriskWindow::onDelete()
+{
+	if(!ensureSavedSearchNameExists())
+		return;
+
+	if(MessageBox(dialog_, "Are you sure you want to delete this search?", "Confirmation", MB_YESNO) != IDYES)
+		return;
+
+	deleteCurrentSavedSearch();
+	setWindowText(savedSearchesCtrl_, "");
+	updateSavedSearchControl();
+}
+
 void FriskWindow::onDoubleClickOutput()
 {
     CHARRANGE charRange;
@@ -621,6 +738,9 @@ static INT_PTR CALLBACK FriskProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM
                 processCommand(IDC_SETTINGS, onSettings);
                 processCommand(IDC_BROWSE, onBrowse);
 				processCommand(IDC_STOP, onStop);
+				processCommand(IDC_LOAD, onLoad);
+				processCommand(IDC_SAVE, onSave);
+				processCommand(IDC_DELETE, onDelete);
             };
     }
     return (INT_PTR)FALSE;

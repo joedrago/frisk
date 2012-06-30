@@ -32,8 +32,12 @@ FONT 8, "MS Shell Dlg", 0, 0, 1
     AUTOCHECKBOX    "Make Backup, Extension:", IDC_BACKUP, 12, 208, 97, 8
     COMBOBOX        IDC_BACKUP_EXT, 12, 220, 164, 196, WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWN | CBS_AUTOHSCROLL
     PUSHBUTTON      "Replace", IDC_DOREPLACE, 12, 236, 164, 14
-    PUSHBUTTON      "Settings...", IDC_SETTINGS, 12, 272, 164, 14
-    PUSHBUTTON      "Stop", IDC_STOP, 12, 308, 164, 14, NOT WS_VISIBLE
+    COMBOBOX        IDC_SAVEDSEARCHES, 8, 272, 168, 88, WS_TABSTOP | CBS_DROPDOWN | CBS_HASSTRINGS
+    PUSHBUTTON      "Delete", IDC_DELETE, 8, 288, 56, 14
+    PUSHBUTTON      "Save", IDC_SAVE, 64, 288, 56, 14
+    PUSHBUTTON      "Load", IDC_LOAD, 120, 288, 56, 14
+    PUSHBUTTON      "Settings...", IDC_SETTINGS, 12, 324, 164, 14
+    PUSHBUTTON      "Stop", IDC_STOP, 12, 360, 164, 14, NOT WS_VISIBLE
     CONTROL         "", IDC_OUTPUT, RICHEDIT_CLASS, WS_TABSTOP | WS_HSCROLL | WS_VSCROLL | WS_BORDER | ES_MULTILINE | ES_READONLY, 188, 8, 105, 65
     AUTOCHECKBOX    "Regex", IDC_MATCH_REGEXES, 72, 16, 37, 8, BS_LEFTTEXT
     AUTOCHECKBOX    "Match Case", IDC_MATCH_CASE, 116, 16, 60, 8, BS_LEFTTEXT
@@ -44,8 +48,9 @@ FONT 8, "MS Shell Dlg", 0, 0, 1
     LTEXT           "Max File Size (in kilobytes, 0 for no limit):", IDC_STATIC, 12, 112, 148, 8, SS_LEFT
     GROUPBOX        "Replace:", IDC_STATIC, 4, 164, 180, 92
     LTEXT           "With:", IDC_STATIC, 12, 176, 18, 8, SS_LEFT
-    GROUPBOX        "Settings:", IDC_STATIC, 4, 260, 180, 32
-    LTEXT           "State", IDC_STATE, 12, 296, 168, 8, SS_LEFT
+    GROUPBOX        "Saved Searches", IDC_STATIC, 4, 260, 180, 48
+    GROUPBOX        "Settings:", IDC_STATIC, 4, 312, 180, 32
+    LTEXT           "State", IDC_STATE, 12, 348, 168, 8, SS_LEFT
 }
 
 

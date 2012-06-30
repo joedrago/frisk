@@ -41,6 +41,12 @@ public:
     INT_PTR onShow(WPARAM wParam, LPARAM lParam);
 
     void search(int extraFlags);
+	bool ensureSavedSearchNameExists();
+	void deleteCurrentSavedSearch();
+	void updateSavedSearchControl();
+
+	int flagsFromControls();
+	void flagsToControls(int flags);
 
     void onCancel();
     void onSearch();
@@ -49,6 +55,9 @@ public:
     void onSettings();
     void onBrowse();
 	void onStop();
+	void onSave();
+	void onLoad();
+	void onDelete();
 protected:
     HINSTANCE instance_;
     HFONT font_;
@@ -61,6 +70,7 @@ protected:
     HWND replaceCtrl_;
 	HWND backupExtCtrl_;
     HWND fileSizesCtrl_;
+	HWND savedSearchesCtrl_;
     SearchContext *context_;
     SearchConfig *config_;
     bool running_;
