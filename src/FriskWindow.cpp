@@ -675,6 +675,14 @@ void FriskWindow::onDelete()
 	updateSavedSearchControl();
 }
 
+void FriskWindow::onSavedSearch(WPARAM wParam, LPARAM lParam)
+{
+    if(HIWORD(wParam) == CBN_DBLCLK)
+    {
+        onLoad();
+    }
+}
+
 void FriskWindow::onDoubleClickOutput()
 {
     CHARRANGE charRange;
@@ -741,6 +749,7 @@ static INT_PTR CALLBACK FriskProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM
 				processCommand(IDC_LOAD, onLoad);
 				processCommand(IDC_SAVE, onSave);
 				processCommand(IDC_DELETE, onDelete);
+                processCommandParams(IDC_SAVEDSEARCHES, onSavedSearch);
             };
     }
     return (INT_PTR)FALSE;

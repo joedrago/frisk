@@ -16,6 +16,7 @@
 #define processMessageH(MSG, FUNC) case MSG: return sWindow->FUNC(hDlg, wParam, lParam)
 #define processMessage(MSG, FUNC)  case MSG: return sWindow->FUNC(wParam, lParam)
 #define processCommand(CMD, FUNC)  case CMD: sWindow->FUNC(); return TRUE
+#define processCommandParams(CMD, FUNC)  case CMD: sWindow->FUNC(wParam, lParam); return TRUE
 
 class SettingsWindow
 {

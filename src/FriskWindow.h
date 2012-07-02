@@ -58,6 +58,7 @@ public:
 	void onSave();
 	void onLoad();
 	void onDelete();
+    void onSavedSearch(WPARAM wParam, LPARAM lParam);
 protected:
     HINSTANCE instance_;
     HFONT font_;
