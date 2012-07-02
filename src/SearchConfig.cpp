@@ -7,6 +7,8 @@
 
 #include "SearchConfig.h"
 
+#include <limits>
+
 #include <windows.h>
 #include <shlobj.h>
 #include <cJSON.h>
@@ -31,6 +33,9 @@ static std::string calcConfigFilename()
     return filename;
 }
 
+// Fuck WinDefs.h
+#undef max
+
 bool readEntireFile(const std::string &filename, std::string &contents, s64 maxSizeKb)
 {
     FILE *f = fopen(filename.c_str(), "rb");
@@ -38,7 +43,7 @@ bool readEntireFile(const std::string &filename, std::string &contents, s64 maxS
         return false;
 
     fseek(f, 0, SEEK_END);
-    off_t size = ftell(f);
+    s64 size = _ftelli64(f);
     fseek(f, 0, SEEK_SET);
     if(size == 0)
     {
@@ -52,8 +57,15 @@ bool readEntireFile(const std::string &filename, std::string &contents, s64 maxS
         return false;
     }
 
-    contents.resize(size);
-    size_t bytesRead = fread(&contents[0], sizeof(char), size, f);
+    size_t maxStdStringSize = std::numeric_limits<std::size_t>::max();
+    if(size >= maxStdStringSize)
+    {
+        fclose(f);
+        return false;
+    }
+
+    contents.resize((size_t)size);
+    size_t bytesRead = fread(&contents[0], sizeof(char), (size_t)size, f);
     if(bytesRead != size)
     {
         fclose(f);
