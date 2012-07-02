@@ -109,7 +109,6 @@ protected:
     int directoriesSkipped_;
     int filesSearched_;
     int filesSkipped_;
-    int filesSkippedInaRow_;
     int filesWithHits_;
     int linesWithHits_;
     int hits_;

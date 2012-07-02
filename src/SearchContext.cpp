@@ -425,7 +425,6 @@ void SearchContext::searchProc()
     directoriesSkipped_ = 0;
     filesSearched_ = 0;
     filesSkipped_ = 0;
-    filesSkippedInaRow_ = 0;
     filesWithHits_ = 0;
     linesWithHits_ = 0;
     hits_ = 0;
@@ -520,16 +519,12 @@ void SearchContext::searchProc()
                 if(searchFile(id, filename, filespecRegexes, matchRegex))
                 {
                     filesSearched_++;
-                    filesSkippedInaRow_ = 0;
                 }
                 else
                 {
                     filesSkipped_++;
-                    filesSkippedInaRow_++;
-
-                    if(filesSkippedInaRow_ > 50)
-                        poke(id, "", HighlightList(), 0, false);
                 }
+                poke(id, "", HighlightList(), 0, false);
             }
         }
     }
