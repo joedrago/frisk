@@ -234,6 +234,15 @@ bool SearchContext::searchFile(int id, const std::string &filename, RegexList &f
     int lineNumber = 1;
     char *p = &workBuffer[0];
     char *line;
+
+    if(workBuffer.size() > 3)
+    {
+        if(!memcmp(p, "\xEF\xBB\xBF", 3))
+        {
+            // utf8 BOM, ignore it
+            p += 3;
+        }
+    }
     while((line = nextToken(&p, '\n')) != NULL)
     {
         char *originalLine = line;

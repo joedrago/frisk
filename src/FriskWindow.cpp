@@ -11,14 +11,71 @@
 
 #include <Commdlg.h>
 
+#include <tchar.h>
+#include "StrSafe.h"
+
 static FriskWindow *sWindow = NULL;
+
+using namespace std;
 
 // ------------------------------------------------------------------------------------------------
 // Helpers
 
+void convertWideToUTF8(const vector<WCHAR> &wide, string &utf8)
+{
+    const size_t wideCountMax = INT_MAX - 1;
+    size_t wideCount;
+    HRESULT hr = StringCchLengthW( &wide[0], wideCountMax, &wideCount );
+    if ( FAILED( hr ) )
+    {
+        return;
+    }
+
+    int utf8Count = ::WideCharToMultiByte(CP_UTF8, 0, &wide[0], (int)wideCount, NULL, 0, NULL, NULL);
+    if ( utf8Count == 0 )
+        return;
+
+    utf8.resize(utf8Count + 1);
+
+    int result = ::WideCharToMultiByte(CP_UTF8, 0, &wide[0], (int)wideCount, &utf8[0], utf8Count, NULL, NULL); 
+    if ( result == 0 )
+    {
+        utf8.clear();
+        return;
+    }
+
+    utf8.resize(utf8Count);
+}
+
+void convertUTF8ToWide(const string &utf8, vector<WCHAR> &wide)
+{
+    int wideCount = ::MultiByteToWideChar(CP_UTF8, 0, &utf8[0], (int)utf8.length(), NULL, 0);
+    if ( wideCount == 0 )
+    {
+        wide.clear();
+        wide.resize(1, 0);
+        return;
+    }
+
+    wide.resize(wideCount + 1);
+
+    if(wideCount)
+    {
+        int result = ::MultiByteToWideChar(CP_UTF8, 0, &utf8[0], utf8.length(), &wide[0], wide.size());
+        if ( result == 0 )
+        {
+            wide.clear();
+            wide.resize(1, 0);
+            return;
+        }
+    }
+
+    wide[wideCount] = 0;
+}
+
 static bool hasWindowText(HWND ctrl)
 {
-    int len = GetWindowTextLength(ctrl);
+    int len = GetWindowTextLengthW(ctrl);
     return (len > 0);
 }
 
@@ -34,20 +91,24 @@ void checkCtrl(HWND ctrl, bool checked)
 
 std::string getWindowText(HWND ctrl)
 {
+    std::vector<WCHAR> wideString;
     std::string str;
-    int len = GetWindowTextLength(ctrl);
+    int len = GetWindowTextLengthW(ctrl);
     if(len > 0)
     {
-        str.resize(len+1);
-        GetWindowText(ctrl, &str[0], len+1);
-        str.resize(len);
+        wideString.resize(len+1, 0);
+        GetWindowTextW(ctrl, &wideString[0], len+1);
+        wideString.resize(len);
+        convertWideToUTF8(wideString, str);
     }
     return str;
 }
 
 void setWindowText(HWND ctrl, const std::string &s)
 {
-    SetWindowText(ctrl, s.c_str());
+    std::vector<WCHAR> wideString;
+    convertUTF8ToWide(s, wideString);
+    SetWindowTextW(ctrl, &wideString[0]);
 }
 
 static void comboClear(HWND ctrl)
@@ -55,12 +116,19 @@ static void comboClear(HWND ctrl)
     SendMessage(ctrl, CB_RESETCONTENT, 0, 0);
 }
 
+static void comboAddString(HWND ctrl, const std::string &s)
+{
+    std::vector<WCHAR> wideString;
+    convertUTF8ToWide(s, wideString);
+    SendMessageW(ctrl, CB_ADDSTRING, 0, (LPARAM)&wideString[0]);
+}
+
 static void comboSet(HWND ctrl, StringList &list)
 {
     comboClear(ctrl);
     for(StringList::iterator it = list.begin(); it != list.end(); ++it)
     {
-        SendMessage(ctrl, CB_ADDSTRING, 0, (LPARAM)it->c_str());
+        comboAddString(ctrl, *it);
     }
     SendMessage(ctrl, CB_SETCURSEL, 0, 0);
     SendMessage(ctrl, CB_SETEDITSEL, 0, MAKEWORD(-1, -1));
@@ -397,7 +465,7 @@ void FriskWindow::updateSavedSearchControl()
 
 	for(SavedSearchList::iterator it = config_->savedSearches_.begin(); it != config_->savedSearches_.end(); ++it)
     {
-        SendMessage(savedSearchesCtrl_, CB_ADDSTRING, 0, (LPARAM)it->name.c_str());
+        comboAddString(savedSearchesCtrl_, it->name);
     }
 }
 
@@ -425,17 +493,22 @@ INT_PTR FriskWindow::onPoke(WPARAM wParam, LPARAM lParam)
     GETTEXTLENGTHEX textLengthEx;
     textLengthEx.codepage = CP_ACP;
     textLengthEx.flags = GTL_NUMCHARS;
-    int textLength = SendMessage(outputCtrl_, EM_GETTEXTLENGTHEX, (WPARAM)&textLengthEx, 0);
+    int textLength = SendMessageW(outputCtrl_, EM_GETTEXTLENGTHEX, (WPARAM)&textLengthEx, 0);
 
     // Move the caret to the end of the text
     CHARRANGE charRange;
     charRange.cpMin = textLength;
     charRange.cpMax = textLength;
-    SendMessage(outputCtrl_, EM_EXSETSEL, 0, (LPARAM)&charRange);
+    SendMessageW(outputCtrl_, EM_EXSETSEL, 0, (LPARAM)&charRange);
 
     // Append the incoming text
 	std::string rtfText = rtfHighlight(pokeData->text.c_str(), pokeData->highlights, 0);
-    SendMessage(outputCtrl_, EM_REPLACESEL, FALSE, (LPARAM)rtfText.c_str());
+    vector<WCHAR> wideRTF;
+    convertUTF8ToWide(rtfText, wideRTF);
+    SETTEXTEX ste;
+    ste.flags = ST_SELECTION;
+    ste.codepage = CP_UTF8;
+    SendMessageA(outputCtrl_, EM_SETTEXTEX, (WPARAM)&ste, (LPARAM)rtfText.c_str());
     delete pokeData;
 
     // Move the caret/selection back to where it was, and scroll to the previous view
