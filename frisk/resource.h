@@ -30,7 +30,6 @@
 #define IDC_SAVE                                1021
 #define IDC_COLOR_HIGHLIGHT                     1022
 #define IDC_SAVEDSEARCHES                       1022
-#define IDC_TEXTSIZE                            1024
 #define IDC_CMD_ASSOC                           1028
 #define IDC_CMD_NOTEPAD                         1029
 #define IDC_BACKUP_EXT                          1030
@@ -38,3 +37,5 @@
 #define IDC_BACKUP                              1033
 #define IDC_DELETE                              1035
 #define IDC_COLOR_CONTEXT                       40000
+#define IDC_FONT_DESC                           40001
+#define IDC_FONT                                40002

@@ -35,10 +35,9 @@ INT_PTR SettingsWindow::onInitDialog(HWND hDlg, WPARAM wParam, LPARAM lParam)
     dialog_ = hDlg;
     setWindowText(GetDlgItem(dialog_, IDC_CMD), config_->cmdTemplate_.c_str());
 
-	char textSizeStr[32];
-	sprintf(textSizeStr, "%d", config_->textSize_);
-	setWindowText(GetDlgItem(dialog_, IDC_TEXTSIZE), textSizeStr);
     checkCtrl(GetDlgItem(dialog_, IDC_TRIM_FILENAMES), 0 != (config_->flags_ & SF_TRIM_FILENAMES));
+
+    updateFontDescription();
     return TRUE;
 }
 
@@ -49,15 +48,10 @@ void SettingsWindow::onOK()
     config_->backgroundColor_ = backgroundColor_;
 	config_->highlightColor_ = highlightColor_;
     config_->cmdTemplate_ = getWindowText(GetDlgItem(dialog_, IDC_CMD));
-    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_TRIM_FILENAMES))) 
+    if(ctrlIsChecked(GetDlgItem(dialog_, IDC_TRIM_FILENAMES)))
 		config_->flags_ |= SF_TRIM_FILENAMES;
 	else
 		config_->flags_ &= ~SF_TRIM_FILENAMES;
-
-	std::string textSizeStr = getWindowText(GetDlgItem(dialog_, IDC_TEXTSIZE));
-	int textSize = atoi(textSizeStr.c_str());
-	if(textSize > 0)
-		config_->textSize_ = textSize;
 
     EndDialog(dialog_, IDOK);
 }
@@ -123,6 +117,33 @@ void SettingsWindow::onHighlightColor()
     }
 }
 
+void SettingsWindow::onFont()
+{
+    CHOOSEFONT cf;            // common dialog box structure
+    static LOGFONT lf;        // logical font structure
+
+    HDC hDC = GetDC(NULL);
+
+    ZeroMemory(&lf, sizeof(lf));
+    strcpy(lf.lfFaceName, config_->fontFamily_.c_str());
+    lf.lfHeight = -MulDiv(config_->textSize_, GetDeviceCaps(hDC, LOGPIXELSY), 72);
+
+    ZeroMemory(&cf, sizeof(cf));
+    cf.lStructSize = sizeof(cf);
+    cf.hwndOwner = dialog_;
+    cf.lpLogFont = &lf;
+    cf.Flags = CF_SCREENFONTS | CF_INITTOLOGFONTSTRUCT;
+
+    if (ChooseFont(&cf)==TRUE)
+    {
+        config_->fontFamily_ = lf.lfFaceName;
+        config_->textSize_ = -MulDiv(lf.lfHeight, 72, GetDeviceCaps(hDC, LOGPIXELSY));
+        updateFontDescription();
+    }
+
+    ReleaseDC(NULL, hDC);
+}
+
 void SettingsWindow::onCmdNotepad()
 {
     setWindowText(GetDlgItem(dialog_, IDC_CMD), "notepad.exe \"!FILENAME!\"");
@@ -148,6 +169,7 @@ static INT_PTR CALLBACK SettingsProc(HWND hDlg, UINT message, WPARAM wParam, LPA
                 processCommand(IDC_COLOR_CONTEXT, onContextColor);
                 processCommand(IDC_COLOR_BG, onBackgroundColor);
                 processCommand(IDC_COLOR_HIGHLIGHT, onHighlightColor);
+                processCommand(IDC_FONT, onFont);
                 processCommand(IDC_CMD_NOTEPAD, onCmdNotepad);
                 processCommand(IDC_CMD_ASSOC, onCmdAssoc);
             };
@@ -158,4 +180,12 @@ static INT_PTR CALLBACK SettingsProc(HWND hDlg, UINT message, WPARAM wParam, LPA
 bool SettingsWindow::show()
 {
     return (IDOK == DialogBox(instance_, MAKEINTRESOURCE(IDD_SETTINGS), parent_, SettingsProc));
+}
+
+void SettingsWindow::updateFontDescription()
+{
+    char fontDescription[1024];
+    _snprintf(fontDescription, sizeof(fontDescription), "%s, %d pt", config_->fontFamily_.c_str(), config_->textSize_);
+    fontDescription[ sizeof(fontDescription) - 1 ] = 0;
+    setWindowText(GetDlgItem(dialog_, IDC_FONT_DESC), fontDescription);
 }

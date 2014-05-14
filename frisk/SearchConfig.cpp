@@ -95,7 +95,7 @@ static bool jsonGetString(cJSON *json, const char *k, std::string &v)
     cJSON *child = cJSON_GetObjectItem(json, k);
     if(!child || (child->type != cJSON_String))
         return false;
-    
+
     v = child->valuestring;
     return true;
 }
@@ -108,7 +108,7 @@ static bool jsonGetInt(cJSON *json, const char *k, int &v)
     cJSON *child = cJSON_GetObjectItem(json, k);
     if(!child || (child->type != cJSON_Number))
         return false;
-    
+
     v = child->valueint;
     return true;
 }
@@ -223,6 +223,7 @@ SearchConfig::SearchConfig()
     backgroundColor_ = RGB(0, 0, 0);
 	highlightColor_ = RGB(0, 255, 0);
     cmdTemplate_ = "notepad.exe \"!FILENAME!\"";
+    fontFamily_ = "Courier New";
 	backupExtensions_.push_back("friskbackup");
     fileSizes_.push_back("5000");
 
@@ -265,6 +266,7 @@ void SearchConfig::load()
     jsonGetInt(json, "backgroundColor", backgroundColor_);
     jsonGetInt(json, "highlightColor", highlightColor_);
     jsonGetString(json, "cmdTemplate", cmdTemplate_);
+    jsonGetString(json, "fontFamily", fontFamily_);
     jsonGetStringList(json, "matches", matches_);
     jsonGetStringList(json, "paths", paths_);
     jsonGetStringList(json, "filespecs", filespecs_);
@@ -309,6 +311,7 @@ void SearchConfig::save()
     jsonSetInt(json, "backgroundColor", backgroundColor_);
     jsonSetInt(json, "highlightColor", highlightColor_);
     jsonSetString(json, "cmdTemplate", cmdTemplate_);
+    jsonSetString(json, "fontFamily", fontFamily_);
     jsonSetStringList(json, "matches", matches_);
     jsonSetStringList(json, "paths", paths_);
     jsonSetStringList(json, "filespecs", filespecs_);

@@ -25,6 +25,7 @@ public:
     ~SettingsWindow();
 
     bool show();
+    void updateFontDescription();
 
     INT_PTR onInitDialog(HWND hDlg, WPARAM wParam, LPARAM lParam);
     void onOK();
@@ -33,6 +34,7 @@ public:
     void onContextColor();
     void onBackgroundColor();
     void onHighlightColor();
+    void onFont();
     void onCmdNotepad();
     void onCmdAssoc();
 

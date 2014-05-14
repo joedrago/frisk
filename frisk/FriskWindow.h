@@ -30,8 +30,9 @@ public:
     void controlsToConfig();
     void windowToConfig();
     void updateState(const std::string &progress = "");
+    void checkClick();
 
-	void appendText(const std::string &text, int color, const std::string &link = "");
+	void appendText(const std::string &text, int color, bool link = false);
 
     INT_PTR onInitDialog(HWND hDlg, WPARAM wParam, LPARAM lParam);
     INT_PTR onPoke(WPARAM wParam, LPARAM lParam);
@@ -52,7 +53,7 @@ public:
     void onCancel();
     void onSearch();
     void onReplace();
-    void onDoubleClickOutput();
+    void onClickLink(int offset);
     void onSettings();
     void onBrowse();
 	void onStop();

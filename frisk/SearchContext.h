@@ -33,41 +33,33 @@ protected:
     HANDLE mutex_;
 };
 
-struct Highlight
-{
-	Highlight(int o, int c) { offset = o; count = c; }
-
-	int offset;
-	int count;
-};
-
-typedef std::vector<Highlight> HighlightList;
-
 struct TextBlock
 {
 	std::string text;
 	int color;
+    bool link;
 };
 
-class TextBlockList : public std::vector<TextBlock>
+class TextBlockList : public std::deque<TextBlock>
 {
 public:
-	void addBlock(const std::string &text, int color)
-	{
-		push_back(TextBlock());
-		TextBlock &lastOne = back();
-		lastOne.text = text;
-		lastOne.color = color;
-	}
+    void addBlock(const std::string &text, int color, bool link = false)
+    {
+        push_back(TextBlock());
+        TextBlock &lastOne = back();
+        lastOne.text = text;
+        lastOne.color = color;
+        lastOne.link = link;
+    }
 
-	void addHighlightedBlock(const std::string &text, int offset, int count, int textColor, int highlightedColor)
+	void addHighlightedBlock(const std::string &text, int offset, int count, int textColor, int highlightedColor, bool link = false)
 	{
 		std::string pre = text.substr(0, offset);
 		std::string highlighted = text.substr(offset, count);
 		std::string post = text.substr(offset + count);
 
 		addBlock(pre, textColor);
-		addBlock(highlighted, highlightedColor);
+		addBlock(highlighted, highlightedColor, link);
 		addBlock(post, textColor);
 	}
 };

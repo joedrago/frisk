@@ -10,6 +10,7 @@
 
 #include <string>
 #include <vector>
+#include <deque>
 
 typedef long long s64;
 
@@ -55,6 +56,7 @@ public:
     void save();
 
     std::string cmdTemplate_;
+    std::string fontFamily_;
 
     StringList matches_;
     StringList paths_;

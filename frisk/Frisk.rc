@@ -56,7 +56,7 @@ FONT 8, "MS Shell Dlg", 0, 0, 1
 
 
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
-IDD_SETTINGS DIALOGEX 0, 0, 203, 173
+IDD_SETTINGS DIALOGEX 0, 0, 203, 175
 STYLE DS_MODALFRAME | DS_SHELLFONT | WS_CAPTION | WS_POPUP | WS_SYSMENU
 CAPTION "Settings"
 FONT 8, "MS Shell Dlg", 400, 0, 1
@@ -67,15 +67,15 @@ FONT 8, "MS Shell Dlg", 400, 0, 1
     PUSHBUTTON      "Text...", IDC_COLOR_TEXT, 8, 72, 60, 14, 0, WS_EX_LEFT
     PUSHBUTTON      "Background...", IDC_COLOR_BG, 72, 72, 60, 14, 0, WS_EX_LEFT
     PUSHBUTTON      "Highlight...", IDC_COLOR_HIGHLIGHT, 136, 72, 60, 14, 0, WS_EX_LEFT
-    PUSHBUTTON      "Context...", IDC_COLOR_CONTEXT, 8, 88, 60, 14, 0, WS_EX_LEFT
-    AUTOCHECKBOX    "Trim Filenames in Search Output", IDC_TRIM_FILENAMES, 76, 120, 118, 8, 0, WS_EX_LEFT
-    EDITTEXT        IDC_TEXTSIZE, 8, 132, 60, 14, ES_AUTOHSCROLL | ES_NUMBER, WS_EX_LEFT
+    PUSHBUTTON      "Context (line numbers, filenames) ...", IDC_COLOR_CONTEXT, 8, 88, 188, 14, 0, WS_EX_LEFT
+    PUSHBUTTON      "Font...", IDC_FONT, 8, 120, 44, 14, 0, WS_EX_LEFT
+    AUTOCHECKBOX    "Trim Filenames in Search Output", IDC_TRIM_FILENAMES, 8, 140, 118, 8, 0, WS_EX_LEFT
     DEFPUSHBUTTON   "OK", IDOK, 76, 156, 60, 14, 0, WS_EX_LEFT
     PUSHBUTTON      "Cancel", IDCANCEL, 140, 156, 60, 14, 0, WS_EX_LEFT
     GROUPBOX        "Open With: (when double clicking on output line)", IDC_STATIC, 4, 4, 196, 52, 0, WS_EX_LEFT
     GROUPBOX        "Colors", IDC_STATIC, 4, 60, 196, 44, 0, WS_EX_LEFT
-    GROUPBOX        "Other", IDC_STATIC, 4, 108, 196, 44, 0, WS_EX_LEFT
-    LTEXT           "Text size:", IDC_STATIC, 8, 120, 31, 8, SS_LEFT, WS_EX_LEFT
+    GROUPBOX        "Font / Other", IDC_STATIC, 4, 108, 196, 44, 0, WS_EX_LEFT
+    LTEXT           "Static", IDC_FONT_DESC, 68, 124, 128, 8, SS_LEFT, WS_EX_LEFT
 }
 
 

@@ -52,7 +52,7 @@ ScopedMutex::~ScopedMutex()
 // ------------------------------------------------------------------------------------------------
 
 SearchEntry::SearchEntry()
-	: contextOnly_(false)
+    : contextOnly_(false)
 {
 }
 
@@ -69,7 +69,7 @@ SearchContext::SearchContext(HWND window)
 , window_(window)
 , pokeData_(NULL)
 {
-	WTFMUTEX = CreateMutex(NULL, FALSE, NULL);
+    WTFMUTEX = CreateMutex(NULL, FALSE, NULL);
 
     mutex_ = CreateMutex(NULL, FALSE, NULL);
     config_.load();
@@ -95,93 +95,88 @@ void SearchContext::clear()
 
 void SearchContext::makePretty(SearchEntry &entry)
 {
-	if(entry.filename_.empty())
-		return;
+    if(entry.filename_.empty())
+        return;
 
     std::string s;
-	TextBlockList blocks;
-	
-	if(lastFilename_ != entry.filename_)
-	{
-		s = entry.filename_.c_str();
-		if(params_.flags & SF_TRIM_FILENAMES)
-		{
-			std::string &startingPath = params_.paths[0];
-			if(strstri((char *)s.c_str(), startingPath.c_str()) == s.c_str())
-			{
-				s = s.substr(startingPath.length());
-				if(s.length() && (s[0] == '\\'))
-				{
-					s.erase(s.begin());
-				}
-			}
-		}
+    TextBlockList blocks;
 
-		s.insert(0, "\n");
-		s += ":\n";
-		blocks.addBlock(s, config_.contextColor_);
+    if(lastFilename_ != entry.filename_)
+    {
+        s = entry.filename_.c_str();
+        if(params_.flags & SF_TRIM_FILENAMES)
+        {
+            std::string &startingPath = params_.paths[0];
+            if(strstri((char *)s.c_str(), startingPath.c_str()) == s.c_str())
+            {
+                s = s.substr(startingPath.length());
+                if(s.length() && (s[0] == '\\'))
+                {
+                    s.erase(s.begin());
+                }
+            }
+        }
 
-		lastFilename_ = entry.filename_;
-	}
-	else if(entry.line_ != (lastLine_ + 1))
-	{
-		blocks.addBlock("  ...\n", config_.contextColor_);
-	}
+        s.insert(0, "\n");
+        s += ":\n";
+        blocks.addBlock(s, config_.contextColor_);
 
-	lastLine_ = entry.line_;
+        lastFilename_ = entry.filename_;
+    }
+    else if(entry.line_ != (lastLine_ + 1))
+    {
+        blocks.addBlock("  ...\n", config_.contextColor_);
+    }
 
-	char lineNo[64];
+    lastLine_ = entry.line_;
+
+    char lineNo[64];
     sprintf(lineNo, "%5d%s ", entry.line_, entry.contextOnly_ ? " " : ":");
-	blocks.addBlock(lineNo, config_.contextColor_);
+    blocks.addBlock(lineNo, config_.contextColor_);
 
-	for(TextBlockList::iterator it = entry.textBlocks.begin(); it != entry.textBlocks.end(); ++it)
-	{
-		blocks.push_back(*it);
-	}
+    for(TextBlockList::iterator it = entry.textBlocks.begin(); it != entry.textBlocks.end(); ++it)
+    {
+        blocks.push_back(*it);
+    }
 
-	blocks.addBlock("\n", config_.textColor_);
+    blocks.addBlock("\n", config_.textColor_);
 
-	blocks.swap(entry.textBlocks);
+    blocks.swap(entry.textBlocks);
 }
 
 void SearchContext::sendError(int id, const std::string &error)
 {
-	TextBlockList textBlocks;
-	textBlocks.addBlock(error, RGB(255, 0, 0));
-	poke(id, textBlocks, false);
+    TextBlockList textBlocks;
+    textBlocks.addBlock(error, RGB(255, 0, 0));
+    poke(id, textBlocks, false);
 }
 
 void SearchContext::append(int id, SearchEntry &entry)
 {
     lock();
 
-	makePretty(entry);
+    makePretty(entry);
 
-	TextBlockList textBlocks;
-	textBlocks.swap(entry.textBlocks);
-	list_.push_back(entry);
+    TextBlockList textBlocks;
+    textBlocks.swap(entry.textBlocks);
+    for(TextBlockList::iterator it = textBlocks.begin(); it != textBlocks.end(); ++it)
+    {
+        offset_ += it->text.size();
+    }
+    entry.offset_ = offset_;
+    list_.push_back(entry);
 
-	unlock();
+    unlock();
 
     poke(id, textBlocks, false);
 }
 
-void WTF(const char *t)
-{
-	ScopedMutex lock(WTFMUTEX);
-	OutputDebugString(t);
-}
-
 void SearchContext::poke(int id, TextBlockList &textBlocks, bool finished)
 {
-	if(textBlocks.size())
-		pokeData_->textBlocks.swap(textBlocks);
+    if(textBlocks.size())
+        pokeData_->textBlocks.swap(textBlocks);
 
-	char wtf[1024];
-	sprintf(wtf, "SearchContext::poke: %d\n", (int)textBlocks.size());
-	WTF(wtf);
-
-	if(window_ != INVALID_HANDLE_VALUE)
+    if(window_ != INVALID_HANDLE_VALUE)
     {
         UINT now = GetTickCount();
         if(finished || (now > (lastPoke_ + (1000 / POKES_PER_SECOND))) || pokeData_->textBlocks.size())
@@ -272,11 +267,11 @@ bool SearchContext::searchFile(int id, const std::string &filename, RegexList &f
     std::string workBuffer = contents;
     std::string updatedContents;
 
-	std::deque<char *> contextLines;
+    std::deque<char *> contextLines;
 
     bool atLeastOneMatch = false;
 
-	int trailingContextLines = 0;
+    int trailingContextLines = 0;
     int lineNumber = 1;
     char *p = &workBuffer[0];
     char *line;
@@ -287,20 +282,24 @@ bool SearchContext::searchFile(int id, const std::string &filename, RegexList &f
         SearchEntry entry;
         int ovector[100];
 
-		bool hasCarriageReturn = false;
-		int lineLen = strlen(line);
-		if(lineLen && (line[lineLen - 1] == '\r'))
-		{
-			line[lineLen - 1] = 0;
-			hasCarriageReturn = true;
-		}
+        // Strip newline, but remember exactly what kind it was
+        bool hasCarriageReturn = false;
+        int lineLen = strlen(line);
+        if(lineLen && (line[lineLen - 1] == '\r'))
+        {
+            line[lineLen - 1] = 0;
+            hasCarriageReturn = true;
+        }
 
+        // Matching loop (we might find our string a few times on a single line)
+        bool lineMatched = false;
         do
         {
             bool matches = false;
             int matchPos;
             int matchLen;
 
+            // The actual match. Either invoke PCRE or do a boring strstr
             if(matchRegex)
             {
                 int rc;
@@ -326,15 +325,23 @@ bool SearchContext::searchFile(int id, const std::string &filename, RegexList &f
                 }
             }
 
+            if(matches)
+                lineMatched = true;
+
+            // Handle the match. For replace or find, we:
+            // * Add output explaining the match
+            // * Advance the line pointer for another match attempt
+            // ... or ...
+            // * "break", which leaves the matching loop
             if(params_.flags & SF_REPLACE)
             {
                 if(matches)
                 {
-#ifdef BROKLED
-					replacedLine.append(line, matchPos);
-                    entry.highlights_.push_back(Highlight(replacedLine.length(), params_.replace.length()));
+                    std::string temp(line, matchPos);
+                    replacedLine.append(temp);
                     replacedLine.append(params_.replace);
-#endif
+                    entry.textBlocks.addBlock(temp, config_.textColor_);
+                    entry.textBlocks.addBlock(params_.replace, config_.highlightColor_, true);
                     line += matchPos + matchLen;
                 }
                 else
@@ -346,9 +353,7 @@ bool SearchContext::searchFile(int id, const std::string &filename, RegexList &f
             {
                 if(matches)
                 {
-					entry.filename_ = filename;
-                    entry.line_ = lineNumber;
-					entry.textBlocks.addHighlightedBlock(originalLine, matchPos + (line - originalLine), matchLen, config_.textColor_, config_.highlightColor_);
+                    entry.textBlocks.addHighlightedBlock(originalLine, matchPos + (line - originalLine), matchLen, config_.textColor_, config_.highlightColor_, true);
                     line += matchPos + matchLen;
                 }
                 else
@@ -360,85 +365,98 @@ bool SearchContext::searchFile(int id, const std::string &filename, RegexList &f
             if(matches)
                 hits_++;
         }
-        while(*line);
+        while(*line); // end of matching loop
 
-        if(!entry.filename_.empty())
-        {
-            linesWithHits_++;
-            atLeastOneMatch = true;
-        }
-
+        // If we're doing a replace, finish the line and append to the final updated contents
         if(params_.flags & SF_REPLACE)
         {
             if(line && *line)
-                replacedLine += line;
-            if(replacedLine != originalLine)
             {
-#ifdef BROKLED
-				entry.filename_ = filename;
-                entry.match_ = replacedLine;
-                entry.line_ = lineNumber;
-                append(id, entry);
-#endif
+                replacedLine += line;
+                entry.textBlocks.addBlock(line, config_.textColor_);
             }
-			if(hasCarriageReturn)
-			{
-				replacedLine += "\r";
-			}
+            if(hasCarriageReturn)
+            {
+                replacedLine += "\r";
+            }
             replacedLine += "\n";
             updatedContents += replacedLine;
         }
-        else
+
+        bool outputMatch = false;
+        if(lineMatched)
         {
-            if(entry.filename_.empty())
-			{
-				// didnt match
-				if(trailingContextLines > 0)
-				{
-					entry.filename_ = filename;
-					entry.line_ = lineNumber;
-					entry.contextOnly_ = true;
-					entry.textBlocks.addBlock(originalLine, config_.textColor_);
-					append(id, entry);
-					trailingContextLines--;
-				}
-				else
-				{
-					// didn't match, wasn't output as context. stash it in contextLines
-					contextLines.push_back(originalLine);
-					if(contextLines.size() > config_.contextLines_)
-						contextLines.pop_front();
-				}
-			}
-			else
-			{
-				// output all existing context lines
-				if(contextLines.size())
-				{
-					SearchEntry contextEntry;
-					contextEntry.filename_ = entry.filename_;
-					contextEntry.contextOnly_ = true;
-					int currLine = entry.line_ - contextLines.size();
-					for(std::deque<char *>::iterator it = contextLines.begin(); it != contextLines.end(); ++it)
-					{
-						TextBlockList textBlocks;
-						textBlocks.addBlock(*it, config_.textColor_);
-						contextEntry.textBlocks.swap(textBlocks);
-						contextEntry.line_ = currLine++;
-						append(id, contextEntry);
-					}
+            // keep stats
+            linesWithHits_++;
+            atLeastOneMatch = true;
 
-					contextLines.clear();
-				}
+            // If we matched, consider notifying the user. We'll always say something
+            // unless the replaced text doesn't actually change the line.
+            outputMatch = ( !(params_.flags & SF_REPLACE) ) || (replacedLine != originalLine);
 
-				trailingContextLines = config_.contextLines_;
-				append(id, entry);
-			}
+            if(outputMatch)
+            {
+                entry.filename_ = filename;
+                entry.line_ = lineNumber;
+
+                // output all existing context lines
+                if(contextLines.size())
+                {
+                    SearchEntry contextEntry;
+                    contextEntry.filename_ = entry.filename_;
+                    contextEntry.contextOnly_ = true;
+                    int currLine = entry.line_ - contextLines.size();
+                    for(std::deque<char *>::iterator it = contextLines.begin(); it != contextLines.end(); ++it)
+                    {
+                        TextBlockList textBlocks;
+                        textBlocks.addBlock(*it, config_.textColor_);
+                        contextEntry.textBlocks.swap(textBlocks);
+                        contextEntry.line_ = currLine++;
+                        append(id, contextEntry);
+                    }
+
+                    contextLines.clear();
+                }
+
+                append(id, entry);
+            }
+
+            // Remember that we'd like the next few lines, even if they don't match
+            trailingContextLines = config_.contextLines_;
         }
+
+        if(!outputMatch)
+        {
+            // Didn't output a match. Keep track or output the line anyway for contextual reasons.
+
+            if(trailingContextLines > 0)
+            {
+                // A recent match wants to see this line in the output anyway
+
+                SearchEntry trailingEntry;
+                trailingEntry.filename_ = filename;
+                trailingEntry.line_ = lineNumber;
+                trailingEntry.contextOnly_ = true;
+                trailingEntry.textBlocks.addBlock(originalLine, config_.textColor_);
+                append(id, trailingEntry);
+                trailingContextLines--;
+            }
+            else
+            {
+                // didn't output a match, and wasn't output as context. stash it in contextLines
+
+                contextLines.push_back(originalLine);
+                if((int)contextLines.size() > config_.contextLines_)
+                    contextLines.pop_front();
+            }
+        }
+
         lineNumber++;
-    }
+    } // end of line loop (done reading file)
+
     if(atLeastOneMatch)
         filesWithHits_++;
+
     if(params_.flags & SF_REPLACE)
     {
         if((contents != updatedContents))
@@ -452,10 +470,10 @@ bool SearchContext::searchFile(int id, const std::string &filename, RegexList &f
 
                 if(!writeEntireFile(backupFilename, contents))
                 {
-					std::string err = "WARNING: Couldn't write backup file (skipping replacement): ";
+                    std::string err = "WARNING: Couldn't write backup file (skipping replacement): ";
                     err += backupFilename;
                     err += "\n";
-					sendError(id, err);
+                    sendError(id, err);
 
                     overwriteFile = false;
                 }
@@ -469,10 +487,10 @@ bool SearchContext::searchFile(int id, const std::string &filename, RegexList &f
                 }
                 else
                 {
-					std::string err = "WARNING: Couldn't write to file: ";
+                    std::string err = "WARNING: Couldn't write to file: ";
                     err += filename;
                     err += "\n";
-					sendError(id, err);
+                    sendError(id, err);
                 }
             }
         }
@@ -497,6 +515,7 @@ void SearchContext::search(const SearchParams &params)
 
     params_ = params;
     stop_ = 0;
+    offset_ = 0;
 
     DWORD id;
     thread_ = CreateThread(NULL, 0, staticSearchProc, (void*)this, 0, &id);
@@ -531,7 +550,7 @@ void SearchContext::searchProc()
     filesWithHits_ = 0;
     linesWithHits_ = 0;
     hits_ = 0;
-	lastFilename_ = "";
+    lastFilename_ = "";
 
     unsigned int startTick = GetTickCount();
 
@@ -632,7 +651,7 @@ void SearchContext::searchProc()
                     filesSkipped_++;
                 }
 
-				poke(id, TextBlockList(), false);
+                poke(id, TextBlockList(), false);
             }
         }
 
@@ -658,7 +677,7 @@ cleanup:
         const char *verb = "searched";
         if(params_.flags & SF_REPLACE)
             verb = "updated";
-        sprintf(buffer, "\n%d hits in %d lines across %d files.\n%d directories scanned, %d files %s, %d files skipped (%3.3f sec)", 
+        sprintf(buffer, "\n%d hits in %d lines across %d files.\n%d directories scanned, %d files %s, %d files skipped (%3.3f sec)",
             hits_,
             linesWithHits_,
             filesWithHits_,
@@ -668,9 +687,9 @@ cleanup:
             filesSkipped_,
             sec);
 
-		TextBlockList textBlocks;
-		textBlocks.addBlock(buffer, config_.textColor_);
-		poke(id, textBlocks, true);
+        TextBlockList textBlocks;
+        textBlocks.addBlock(buffer, config_.textColor_);
+        poke(id, textBlocks, true);
     }
     delete pokeData_;
     pokeData_ = NULL;

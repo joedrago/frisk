@@ -109,11 +109,6 @@ FriskWindow::FriskWindow(HINSTANCE instance)
 , closing_(false)
 {
     sWindow = this;
-
-    HDC dc = GetDC(NULL);
-    font_ = CreateFont(-MulDiv(8, GetDeviceCaps(dc, LOGPIXELSY), 72), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS,
-        CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, VARIABLE_PITCH, "Courier New");
-    ReleaseDC(NULL, dc);
 }
 
 FriskWindow::~FriskWindow()
@@ -158,14 +153,14 @@ void FriskWindow::outputUpdateColors()
 
 int FriskWindow::flagsFromControls()
 {
-	int flags = config_->flags_;
+    int flags = config_->flags_;
     flags &= ~(
-		  SF_RECURSIVE 
-		| SF_FILESPEC_REGEXES 
-		| SF_FILESPEC_CASE_SENSITIVE 
-		| SF_MATCH_REGEXES
-		| SF_MATCH_CASE_SENSITIVE
-		| SF_BACKUP);
+          SF_RECURSIVE
+        | SF_FILESPEC_REGEXES
+        | SF_FILESPEC_CASE_SENSITIVE
+        | SF_MATCH_REGEXES
+        | SF_MATCH_CASE_SENSITIVE
+        | SF_BACKUP);
     if(ctrlIsChecked(GetDlgItem(dialog_, IDC_RECURSIVE)))      flags |= SF_RECURSIVE;
     if(ctrlIsChecked(GetDlgItem(dialog_, IDC_FILESPEC_REGEX))) flags |= SF_FILESPEC_REGEXES;
     if(ctrlIsChecked(GetDlgItem(dialog_, IDC_FILESPEC_CASE)))  flags |= SF_FILESPEC_CASE_SENSITIVE;
@@ -173,7 +168,7 @@ int FriskWindow::flagsFromControls()
     if(ctrlIsChecked(GetDlgItem(dialog_, IDC_MATCH_CASE)))     flags |= SF_MATCH_CASE_SENSITIVE;
     if(ctrlIsChecked(GetDlgItem(dialog_, IDC_BACKUP)))         flags |= SF_BACKUP;
 
-	return flags;
+    return flags;
 }
 
 void FriskWindow::flagsToControls(int flags)
@@ -192,9 +187,9 @@ void FriskWindow::configToControls()
     comboSet(matchCtrl_, config_->matches_);
     comboSet(filespecCtrl_, config_->filespecs_);
     comboSet(replaceCtrl_, config_->replaces_);
-	comboSet(backupExtCtrl_, config_->backupExtensions_);
+    comboSet(backupExtCtrl_, config_->backupExtensions_);
     comboSet(fileSizesCtrl_, config_->fileSizes_);
-	flagsToControls(config_->flags_);
+    flagsToControls(config_->flags_);
 }
 
 void FriskWindow::controlsToConfig()
@@ -205,7 +200,7 @@ void FriskWindow::controlsToConfig()
     comboLRU(replaceCtrl_, config_->replaces_, 10);
     comboLRU(backupExtCtrl_, config_->backupExtensions_, 10);
     comboLRU(fileSizesCtrl_, config_->fileSizes_, 10);
-	config_->flags_ = flagsFromControls();
+    config_->flags_ = flagsFromControls();
 }
 
 void FriskWindow::windowToConfig()
@@ -226,12 +221,12 @@ void FriskWindow::updateState(const std::string &progress)
             setWindowText(stateCtrl_, "Frisking, please wait...");
         else
             setWindowText(stateCtrl_, progress);
-		ShowWindow(GetDlgItem(dialog_, IDC_STOP), SW_SHOW);
+        ShowWindow(GetDlgItem(dialog_, IDC_STOP), SW_SHOW);
     }
     else
     {
         setWindowText(stateCtrl_, "");
-		ShowWindow(GetDlgItem(dialog_, IDC_STOP), SW_HIDE);
+        ShowWindow(GetDlgItem(dialog_, IDC_STOP), SW_HIDE);
     }
     InvalidateRect(stateCtrl_, NULL, TRUE);
 }
@@ -249,9 +244,14 @@ INT_PTR FriskWindow::onInitDialog(HWND hDlg, WPARAM wParam, LPARAM lParam)
     matchCtrl_         = GetDlgItem(hDlg, IDC_MATCH);
     stateCtrl_         = GetDlgItem(hDlg, IDC_STATE);
     replaceCtrl_       = GetDlgItem(hDlg, IDC_REPLACE);
-	backupExtCtrl_     = GetDlgItem(hDlg, IDC_BACKUP_EXT);
+    backupExtCtrl_     = GetDlgItem(hDlg, IDC_BACKUP_EXT);
     fileSizesCtrl_     = GetDlgItem(hDlg, IDC_FILESIZE);
-	savedSearchesCtrl_ = GetDlgItem(hDlg, IDC_SAVEDSEARCHES);
+    savedSearchesCtrl_ = GetDlgItem(hDlg, IDC_SAVEDSEARCHES);
+
+    HDC dc = GetDC(NULL);
+
+    font_ = CreateFont(-MulDiv(8, GetDeviceCaps(dc, LOGPIXELSY), 72), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS,
+        CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, VARIABLE_PITCH, config_->fontFamily_.c_str());
 
     SendMessage(pathCtrl_,          WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
     SendMessage(filespecCtrl_,      WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
@@ -261,15 +261,14 @@ INT_PTR FriskWindow::onInitDialog(HWND hDlg, WPARAM wParam, LPARAM lParam)
     SendMessage(backupExtCtrl_,     WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
     SendMessage(savedSearchesCtrl_, WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
 
-    SendMessage(GetDlgItem(dialog_, IDC_RECURSIVE),      WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
-    SendMessage(GetDlgItem(dialog_, IDC_FILESPEC_REGEX), WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
-    SendMessage(GetDlgItem(dialog_, IDC_FILESPEC_CASE),  WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
-    SendMessage(GetDlgItem(dialog_, IDC_MATCH_REGEXES),  WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
-    SendMessage(GetDlgItem(dialog_, IDC_MATCH_CASE),     WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+    // SendMessage(GetDlgItem(dialog_, IDC_RECURSIVE),      WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+    // SendMessage(GetDlgItem(dialog_, IDC_FILESPEC_REGEX), WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+    // SendMessage(GetDlgItem(dialog_, IDC_FILESPEC_CASE),  WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+    // SendMessage(GetDlgItem(dialog_, IDC_MATCH_REGEXES),  WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
+    // SendMessage(GetDlgItem(dialog_, IDC_MATCH_CASE),     WM_SETFONT, (WPARAM)font_, MAKEWORD(TRUE, 0));
 
     bool shouldMaximize = (config_->windowMaximized_ != 0);
 
-    HDC dc = GetDC(NULL);
     outputUpdateColors();
     SendMessage(outputCtrl_, EM_SETEVENTMASK, 0, ENM_MOUSEEVENTS|ENM_LINK);
     SendMessage(outputCtrl_, EM_LIMITTEXT, 0x7FFFFFFE, 0);
@@ -277,11 +276,14 @@ INT_PTR FriskWindow::onInitDialog(HWND hDlg, WPARAM wParam, LPARAM lParam)
     charRange.cpMin = -1;
     charRange.cpMax = -1;
     SendMessage(outputCtrl_, EM_EXSETSEL, 0, (LPARAM)&charRange);
+
+    SendMessage(outputCtrl_, EM_AUTOURLDETECT, 0, 0);
+
     ReleaseDC(NULL, dc);
 
     configToControls();
     updateState();
-	updateSavedSearchControl();
+    updateSavedSearchControl();
 
     HICON hIcon;
     hIcon = (HICON)LoadImage(instance_,
@@ -309,23 +311,7 @@ INT_PTR FriskWindow::onInitDialog(HWND hDlg, WPARAM wParam, LPARAM lParam)
     return TRUE;
 }
 
-static void splitHighlights(const char *rawLine, HighlightList &highlights, StringList &l)
-{
-	const char* c = rawLine;
-	for(HighlightList::iterator it = highlights.begin(); it != highlights.end(); it++)
-	{
-		Highlight &highlight = *it;
-		std::string pre(c, rawLine + it->offset);
-		l.push_back(pre);
-		std::string p(rawLine + it->offset, it->count);
-		l.push_back(p);
-		c = rawLine + it->offset + it->count;
-	}
-	if(*c)
-		l.push_back(std::string(c));
-}
-
-void FriskWindow::appendText(const std::string &text, int color, const std::string &link)
+void FriskWindow::appendText(const std::string &text, int color, bool link)
 {
     // Find out where the last character position is (for appending)
     GETTEXTLENGTHEX textLengthEx;
@@ -342,70 +328,74 @@ void FriskWindow::appendText(const std::string &text, int color, const std::stri
     // Append the incoming text
     SendMessage(outputCtrl_, EM_REPLACESEL, FALSE, (LPARAM)text.c_str());
 
-	charRange.cpMax += text.size();
+    charRange.cpMax += text.size();
     SendMessage(outputCtrl_, EM_EXSETSEL, 0, (LPARAM)&charRange);
 
-	CHARFORMAT charFormat;
-	ZeroMemory(&charFormat, sizeof(charFormat));
-	charFormat.cbSize = sizeof(charFormat);
-	charFormat.dwMask = CFM_FACE|CFM_EFFECTS|CFM_COLOR|CFM_SIZE;
-	charFormat.crTextColor = color;
-	charFormat.dwEffects = 0;
-	charFormat.yHeight = config_->textSize_ * 20;
-	strcpy(charFormat.szFaceName, "Liberation Mono");
-	int ret = SendMessage(outputCtrl_, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&charFormat);
+    CHARFORMAT2 charFormat;
+    ZeroMemory(&charFormat, sizeof(charFormat));
+    charFormat.cbSize = sizeof(charFormat);
+    charFormat.dwMask = CFM_FACE|CFM_EFFECTS|CFM_COLOR|CFM_SIZE|CFM_UNDERLINETYPE;
+    charFormat.crTextColor = color;
+    charFormat.dwEffects = 0;
+    charFormat.yHeight = config_->textSize_ * 20;
+    strcpy(charFormat.szFaceName, config_->fontFamily_.c_str());
+    SendMessage(outputCtrl_, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&charFormat);
+
+    if(link)
+    {
+        CHARFORMAT2 charFormat;
+        ZeroMemory(&charFormat, sizeof(charFormat));
+        charFormat.cbSize = sizeof(charFormat);
+        charFormat.dwMask = CFM_EFFECTS;
+        charFormat.dwEffects = CFE_LINK;
+        SendMessage(outputCtrl_, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&charFormat);
+    }
 }
 
 bool FriskWindow::ensureSavedSearchNameExists()
 {
-	bool ret = true;
-	std::string name = getWindowText(savedSearchesCtrl_);
+    bool ret = true;
+    std::string name = getWindowText(savedSearchesCtrl_);
 
-	if(name.empty())
-		ret = false;
-	// TODO: check for only spaces?
+    if(name.empty())
+        ret = false;
+    // TODO: check for only spaces?
 
-	if(!ret)
-	{
-		MessageBox(dialog_, "Please type in or choose a saved search name first.", "Error", MB_OK);
-	}
-	return ret;
+    if(!ret)
+    {
+        MessageBox(dialog_, "Please type in or choose a saved search name first.", "Error", MB_OK);
+    }
+    return ret;
 }
 
 void FriskWindow::deleteCurrentSavedSearch()
 {
-	std::string name = getWindowText(savedSearchesCtrl_);
-	for(SavedSearchList::iterator it = config_->savedSearches_.begin(); it != config_->savedSearches_.end(); ++it)
-	{
-		if(it->name == name)
-		{
-			config_->savedSearches_.erase(it);
-			break;
-		}
-	}
+    std::string name = getWindowText(savedSearchesCtrl_);
+    for(SavedSearchList::iterator it = config_->savedSearches_.begin(); it != config_->savedSearches_.end(); ++it)
+    {
+        if(it->name == name)
+        {
+            config_->savedSearches_.erase(it);
+            break;
+        }
+    }
 }
 
 void FriskWindow::updateSavedSearchControl()
 {
-	comboClear(savedSearchesCtrl_);
+    comboClear(savedSearchesCtrl_);
 
-	for(SavedSearchList::iterator it = config_->savedSearches_.begin(); it != config_->savedSearches_.end(); ++it)
+    for(SavedSearchList::iterator it = config_->savedSearches_.begin(); it != config_->savedSearches_.end(); ++it)
     {
         SendMessage(savedSearchesCtrl_, CB_ADDSTRING, 0, (LPARAM)it->name.c_str());
     }
 }
 
-void WTF(const char *t);
-
 INT_PTR FriskWindow::onPoke(WPARAM wParam, LPARAM lParam)
 {
-	PokeData *pokeData = (PokeData *)lParam;
+    PokeData *pokeData = (PokeData *)lParam;
 
-	char wtf[1024];
-	sprintf(wtf, "onPoke: %d\n", (int)pokeData->textBlocks.size());
-	WTF(wtf);
-
-	if(wParam != context_->searchID())
+    if(wParam != context_->searchID())
         return FALSE;
 
     updateState(pokeData->progress);
@@ -422,11 +412,11 @@ INT_PTR FriskWindow::onPoke(WPARAM wParam, LPARAM lParam)
     POINT prevScrollPos;
     SendMessage(outputCtrl_, EM_GETSCROLLPOS, 0, (LPARAM)&prevScrollPos);
 
-	for(TextBlockList::iterator it = pokeData->textBlocks.begin(); it != pokeData->textBlocks.end(); it++)
-	{
-		appendText(it->text, it->color);
-	}
-	delete pokeData;
+    for(TextBlockList::iterator it = pokeData->textBlocks.begin(); it != pokeData->textBlocks.end(); it++)
+    {
+        appendText(it->text, it->color, it->link);
+    }
+    delete pokeData;
 
     // Move the caret/selection back to where it was, and scroll to the previous view
     SendMessage(outputCtrl_, EM_EXSETSEL, 0, (LPARAM)&prevRange);
@@ -452,21 +442,25 @@ INT_PTR FriskWindow::onNotify(WPARAM wParam, LPARAM lParam)
     {
         switch(nmhdr->code)
         {
-		case EN_LINK:
-			{
-				OutputDebugString("wtf\n");
-			}
-			break;
-
-        case EN_MSGFILTER:
+        case EN_LINK:
             {
-                MSGFILTER *filter = (MSGFILTER *)lParam;
-                if(filter->msg == WM_LBUTTONDBLCLK)
+                ENLINK *enlink = (ENLINK *)lParam;
+                if(enlink->msg  == WM_LBUTTONDOWN)
                 {
-                    onDoubleClickOutput();
+                    onClickLink(enlink->chrg.cpMin);
                 }
             }
             break;
+
+        // case EN_MSGFILTER:
+        //     {
+        //         MSGFILTER *filter = (MSGFILTER *)lParam;
+        //         if(filter->msg == WM_LBUTTONUP)
+        //         {
+        //             checkClick();
+        //         }
+        //     }
+        //     break;
         };
     }
 
@@ -526,7 +520,7 @@ void FriskWindow::search(int extraFlags)
         return;
     }
 
-	ShowWindow(GetDlgItem(dialog_, IDC_STOP), SW_SHOW);
+    ShowWindow(GetDlgItem(dialog_, IDC_STOP), SW_SHOW);
 
     controlsToConfig();
     config_->save();
@@ -538,7 +532,7 @@ void FriskWindow::search(int extraFlags)
     params.flags = config_->flags_ | extraFlags;
     params.match = config_->matches_[0];
     params.replace = config_->replaces_[0];
-	params.backupExtension = config_->backupExtensions_[0];
+    params.backupExtension = config_->backupExtensions_[0];
     split(config_->paths_[0], ";", params.paths);
     split(config_->filespecs_[0], ";", params.filespecs);
     params.maxFileSize = atoi(config_->fileSizes_[0].c_str());
@@ -604,71 +598,71 @@ void FriskWindow::onBrowse()
 
 void FriskWindow::onStop()
 {
-	context_->stop();
+    context_->stop();
 }
 
 void FriskWindow::onLoad()
 {
-	if(!ensureSavedSearchNameExists())
-		return;
+    if(!ensureSavedSearchNameExists())
+        return;
 
-	std::string name = getWindowText(savedSearchesCtrl_);
-	for(SavedSearchList::iterator it = config_->savedSearches_.begin(); it != config_->savedSearches_.end(); ++it)
-	{
-		if(it->name == name)
-		{
-			setWindowText(savedSearchesCtrl_, it->name);
-			setWindowText(matchCtrl_, it->match);
-			setWindowText(pathCtrl_, it->path);
-			setWindowText(filespecCtrl_, it->filespec);
-			setWindowText(fileSizesCtrl_, it->fileSize);
-			setWindowText(replaceCtrl_, it->replace);
-			setWindowText(backupExtCtrl_, it->backupExtension);
-			flagsToControls(it->flags);
+    std::string name = getWindowText(savedSearchesCtrl_);
+    for(SavedSearchList::iterator it = config_->savedSearches_.begin(); it != config_->savedSearches_.end(); ++it)
+    {
+        if(it->name == name)
+        {
+            setWindowText(savedSearchesCtrl_, it->name);
+            setWindowText(matchCtrl_, it->match);
+            setWindowText(pathCtrl_, it->path);
+            setWindowText(filespecCtrl_, it->filespec);
+            setWindowText(fileSizesCtrl_, it->fileSize);
+            setWindowText(replaceCtrl_, it->replace);
+            setWindowText(backupExtCtrl_, it->backupExtension);
+            flagsToControls(it->flags);
 
-			SendMessage(dialog_, WM_SETFOCUS, (WPARAM)matchCtrl_, 0);
-			return;
-		}
-	}
+            SendMessage(dialog_, WM_SETFOCUS, (WPARAM)matchCtrl_, 0);
+            return;
+        }
+    }
 
-	MessageBox(dialog_, "No saved search with that name.", "Error", MB_OK);
+    MessageBox(dialog_, "No saved search with that name.", "Error", MB_OK);
 }
 
 void FriskWindow::onSave()
 {
-	if(!ensureSavedSearchNameExists())
-		return;
+    if(!ensureSavedSearchNameExists())
+        return;
 
-	if(MessageBox(dialog_, "Are you sure you want to save this search?", "Confirmation", MB_YESNO) != IDYES)
-		return;
+    if(MessageBox(dialog_, "Are you sure you want to save this search?", "Confirmation", MB_YESNO) != IDYES)
+        return;
 
-	deleteCurrentSavedSearch();
+    deleteCurrentSavedSearch();
 
-	SavedSearch savedSearch;
-	savedSearch.name = getWindowText(savedSearchesCtrl_);
-	savedSearch.match = getWindowText(matchCtrl_);
-	savedSearch.path = getWindowText(pathCtrl_);
-	savedSearch.filespec = getWindowText(filespecCtrl_);
-	savedSearch.fileSize = getWindowText(fileSizesCtrl_);
-	savedSearch.replace = getWindowText(replaceCtrl_);
-	savedSearch.backupExtension = getWindowText(backupExtCtrl_);
-	savedSearch.flags = flagsFromControls();
-	config_->savedSearches_.push_back(savedSearch);
+    SavedSearch savedSearch;
+    savedSearch.name = getWindowText(savedSearchesCtrl_);
+    savedSearch.match = getWindowText(matchCtrl_);
+    savedSearch.path = getWindowText(pathCtrl_);
+    savedSearch.filespec = getWindowText(filespecCtrl_);
+    savedSearch.fileSize = getWindowText(fileSizesCtrl_);
+    savedSearch.replace = getWindowText(replaceCtrl_);
+    savedSearch.backupExtension = getWindowText(backupExtCtrl_);
+    savedSearch.flags = flagsFromControls();
+    config_->savedSearches_.push_back(savedSearch);
 
-	updateSavedSearchControl();
+    updateSavedSearchControl();
 }
 
 void FriskWindow::onDelete()
 {
-	if(!ensureSavedSearchNameExists())
-		return;
+    if(!ensureSavedSearchNameExists())
+        return;
 
-	if(MessageBox(dialog_, "Are you sure you want to delete this search?", "Confirmation", MB_YESNO) != IDYES)
-		return;
+    if(MessageBox(dialog_, "Are you sure you want to delete this search?", "Confirmation", MB_YESNO) != IDYES)
+        return;
 
-	deleteCurrentSavedSearch();
-	setWindowText(savedSearchesCtrl_, "");
-	updateSavedSearchControl();
+    deleteCurrentSavedSearch();
+    setWindowText(savedSearchesCtrl_, "");
+    updateSavedSearchControl();
 }
 
 void FriskWindow::onSavedSearch(WPARAM wParam, LPARAM lParam)
@@ -679,13 +673,8 @@ void FriskWindow::onSavedSearch(WPARAM wParam, LPARAM lParam)
     }
 }
 
-void FriskWindow::onDoubleClickOutput()
+void FriskWindow::onClickLink(int offset)
 {
-    CHARRANGE charRange;
-    SendMessage(outputCtrl_, EM_EXGETSEL, 0, (LPARAM)&charRange);
-
-    int offset = charRange.cpMin;
-
     context_->lock();
     SearchList &list = context_->list();
     const SearchEntry *entry = NULL;
@@ -706,8 +695,9 @@ void FriskWindow::onDoubleClickOutput()
         replaceAll(cmd, "!LINE!", lineBuffer);
         replaceAll(cmd, "!FILENAME!", entry->filename_.c_str());
 
-		//MessageBox(NULL, cmd.c_str(), "wat", MB_OK);
 #if 0
+//        MessageBox(NULL, cmd.c_str(), "wat", MB_OK);
+#else
         PROCESS_INFORMATION pi;
         STARTUPINFO si;
         ZeroMemory(&si, sizeof(STARTUPINFO));
@@ -720,6 +710,16 @@ void FriskWindow::onDoubleClickOutput()
 #endif
     }
     context_->unlock();
+}
+
+void FriskWindow::checkClick()
+{
+    CHARRANGE range;
+    SendMessage(outputCtrl_, EM_EXGETSEL, 0, (LPARAM)&range);
+    if(range.cpMin == range.cpMax)
+    {
+        onClickLink(range.cpMin);
+    }
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -744,10 +744,10 @@ static INT_PTR CALLBACK FriskProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM
                 processCommand(IDC_DOREPLACE, onReplace);
                 processCommand(IDC_SETTINGS, onSettings);
                 processCommand(IDC_BROWSE, onBrowse);
-				processCommand(IDC_STOP, onStop);
-				processCommand(IDC_LOAD, onLoad);
-				processCommand(IDC_SAVE, onSave);
-				processCommand(IDC_DELETE, onDelete);
+                processCommand(IDC_STOP, onStop);
+                processCommand(IDC_LOAD, onLoad);
+                processCommand(IDC_SAVE, onSave);
+                processCommand(IDC_DELETE, onDelete);
                 processCommandParams(IDC_SAVEDSEARCHES, onSavedSearch);
             };
     }
